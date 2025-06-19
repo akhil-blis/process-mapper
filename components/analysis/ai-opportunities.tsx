@@ -3,12 +3,14 @@
 import type { FlowData } from "@/types/flow"
 import type { AIOpportunity } from "@/types/prototype"
 import { Zap, FileText, BarChart, Sparkles, ArrowRight } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 type AIOpportunitiesProps = {
   flowData: FlowData
 }
 
 export function AIOpportunities({ flowData }: AIOpportunitiesProps) {
+  const router = useRouter()
   // Sample AI opportunities - in a real app these would be generated based on the actual flow
   const opportunities: AIOpportunity[] = [
     {
@@ -92,7 +94,8 @@ export function AIOpportunities({ flowData }: AIOpportunitiesProps) {
         {opportunities.map((opportunity) => (
           <div
             key={opportunity.id}
-            className={`bg-white rounded-lg border border-gray-200 border-l-4 ${impactColors[opportunity.impact]} p-6 hover:shadow-md transition-shadow`}
+            onClick={() => router.push("/opportunity/auto-score-candidates")}
+            className={`bg-white rounded-lg border border-gray-200 border-l-4 ${impactColors[opportunity.impact]} p-6 hover:shadow-md transition-shadow cursor-pointer`}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
@@ -125,9 +128,9 @@ export function AIOpportunities({ flowData }: AIOpportunitiesProps) {
                 </div>
                 <p className="text-gray-700 mb-4">{opportunity.description}</p>
               </div>
-              <button className="flex-shrink-0 ml-4 p-2 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-md transition-colors">
+              <div className="flex-shrink-0 ml-4 p-2 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-md transition-colors">
                 <ArrowRight className="h-4 w-4" />
-              </button>
+              </div>
             </div>
           </div>
         ))}
