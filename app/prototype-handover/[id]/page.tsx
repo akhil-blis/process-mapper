@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { ArrowLeft, Download, Copy, Check, FileText, File, Database, Package } from "lucide-react"
 import { Logo } from "@/components/logo"
 import { AILoading } from "@/components/ai-loading"
@@ -14,13 +14,15 @@ type DownloadableFile = {
   size: string
 }
 
-export default function PrototypingDocsPage() {
-  const [copiedItem, setCopiedItem] = useState<string | null>(null)
+export default function PrototypeHandoverPage() {
   const router = useRouter()
+  const params = useParams()
+  const opportunityId = params.id as string
+
+  const [copiedItem, setCopiedItem] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(() => {
-    // Only show loading if we haven't processed this page in this session
     if (typeof window !== "undefined") {
-      return !sessionStorage.getItem("docs-processed")
+      return !sessionStorage.getItem(`handover-${opportunityId}-processed`)
     }
     return true
   })
@@ -28,11 +30,6 @@ export default function PrototypingDocsPage() {
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [])
-
-  useEffect(() => {
-    // Redirect to a default opportunity for now
-    router.replace("/prototype-handover/auto-score-candidates")
-  }, [router])
 
   const downloadableFiles: DownloadableFile[] = [
     {
@@ -145,9 +142,7 @@ Reference the process_summary.txt and ai_opportunities.json files for specific r
   }
 
   const handleDownloadFile = (fileId: string) => {
-    // In a real app, this would trigger actual file download
     console.log(`Downloading file: ${fileId}`)
-    // Simulate download
     const link = document.createElement("a")
     link.href = `/api/download?file=${fileId}`
     link.download = downloadableFiles.find((f) => f.id === fileId)?.title || "file"
@@ -157,7 +152,6 @@ Reference the process_summary.txt and ai_opportunities.json files for specific r
   }
 
   const handleDownloadAll = () => {
-    // In a real app, this would download a ZIP bundle
     console.log("Downloading all files as ZIP bundle")
     const link = document.createElement("a")
     link.href = "/api/download?bundle=all"
@@ -176,7 +170,7 @@ Reference the process_summary.txt and ai_opportunities.json files for specific r
           onComplete={() => {
             setIsLoading(false)
             if (typeof window !== "undefined") {
-              sessionStorage.setItem("docs-processed", "true")
+              sessionStorage.setItem(`handover-${opportunityId}-processed`, "true")
             }
           }}
           duration={3000}
@@ -357,11 +351,11 @@ Reference the process_summary.txt and ai_opportunities.json files for specific r
             </div>
           </main>
 
-          {/* Sticky Footer */}
+          {/* Footer Navigation */}
           <footer className="fixed bottom-0 left-0 right-0 bg-violet-600 border-t border-violet-700 py-4 shadow-lg z-30">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
               <button
-                onClick={() => router.push("/analysis")}
+                onClick={() => router.push(`/prototype-plan/${opportunityId}`)}
                 className="text-sm text-violet-100 hover:text-white hover:bg-violet-700 transition-colors flex items-center gap-2 px-3 py-2 rounded-md"
               >
                 <ArrowLeft className="h-4 w-4" />

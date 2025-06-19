@@ -50,12 +50,12 @@ export function AIAssistant({ onSuggestion, onToggle }: AIAssistantProps) {
     setResponse("")
 
     setTimeout(() => {
-      // Always add the same new screen regardless of user input
+      // Always add the evaluator dashboard regardless of user input
       const confirmationResponse =
-        "I've added an 'Interview Confirmation' screen that shows all interview details, meeting links, and next steps. This connects from the Interview Scheduler to provide candidates with a complete summary."
+        "I've added an 'Evaluator Dashboard' screen that helps HR reviewers sort candidates by AI-assigned scores, review edge cases, and leave final comments. This supports human-in-the-loop decision making."
 
       setResponse(confirmationResponse)
-      onSuggestion("add_interview_confirmation_screen") // Send a specific action identifier
+      onSuggestion("add_evaluator_dashboard") // Send a specific action identifier
       setIsProcessing(false)
       setPrompt("") // Clear the prompt after submission
     }, 1500)
@@ -69,10 +69,10 @@ export function AIAssistant({ onSuggestion, onToggle }: AIAssistantProps) {
   }
 
   const quickSuggestions = [
-    "Add interview confirmation details",
-    "Include meeting preparation info",
-    "Add interview feedback collection",
-    "Create post-interview follow-up",
+    "Add evaluator dashboard for HR reviewer",
+    "Include candidate comparison view",
+    "Add scoring feedback collection",
+    "Create batch processing screen",
   ]
 
   return (
@@ -137,22 +137,33 @@ export function AIAssistant({ onSuggestion, onToggle }: AIAssistantProps) {
           {/* Input Area */}
           <div className="p-3 border-t border-gray-200 bg-gray-50 rounded-b-xl">
             <div className="bg-white border border-gray-300 rounded-lg focus-within:border-violet-500 focus-within:ring-1 focus-within:ring-violet-500 transition-all">
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="e.g., Add a settings screen"
-                className="w-full resize-none outline-none bg-transparent text-gray-800 placeholder-gray-400 text-sm p-2.5 min-h-[40px] max-h-[80px]"
-                rows={1}
-              />
-              <div className="flex items-center justify-end px-2 pb-1.5 pt-1">
-                <span className="text-xs text-gray-400 mr-2">
-                  {prompt.length > 0 ? (isMac() ? "⌘+Enter" : "Ctrl+Enter") : ""}
+              <div className="p-3">
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="e.g., Add a settings screen"
+                  className="w-full resize-none outline-none bg-transparent text-gray-800 placeholder-gray-400 text-sm leading-5 min-h-[20px] max-h-[80px] overflow-y-auto"
+                  rows={1}
+                  style={{
+                    height: "auto",
+                    minHeight: "20px",
+                  }}
+                  onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement
+                    target.style.height = "auto"
+                    target.style.height = Math.min(target.scrollHeight, 80) + "px"
+                  }}
+                />
+              </div>
+              <div className="flex items-center justify-between px-3 pb-2 pt-1 border-t border-gray-100">
+                <span className="text-xs text-gray-400">
+                  {prompt.length > 0 ? (isMac() ? "⌘+Enter" : "Ctrl+Enter") : "Type your request..."}
                 </span>
                 <button
                   onClick={handleSubmit}
                   disabled={!prompt.trim() || isProcessing}
-                  className={`p-1.5 rounded-md transition-all ${
+                  className={`p-2 rounded-md transition-all flex-shrink-0 ${
                     prompt.trim() && !isProcessing
                       ? "bg-violet-600 text-white hover:bg-violet-700 shadow-sm"
                       : "bg-gray-200 text-gray-400 cursor-not-allowed"
