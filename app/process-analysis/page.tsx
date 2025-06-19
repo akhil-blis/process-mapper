@@ -1,233 +1,244 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import type { FlowData } from "@/types/flow"
-import type { AIOpportunity } from "@/types/prototype"
-import { ProcessSummary } from "@/components/analysis/process-summary"
-import { ArrowLeft } from "lucide-react"
+import {
+  ArrowLeft,
+  Code,
+  Clock,
+  Users,
+  AlertTriangle,
+  Play,
+  Zap,
+  Shuffle,
+  Grid,
+  Layers,
+  FileText,
+  ClipboardList,
+  FilePlus,
+  Terminal,
+  Mail,
+} from "lucide-react"
 import { Logo } from "@/components/logo"
 import { AILoading } from "@/components/ai-loading"
+import { ProcessAnalysisOverrideModal } from "@/components/analysis/process-analysis-override-modal"
 
-// Sample flow data - in a real app this would come from the previous screen or global state
-const sampleFlowData: FlowData = {
-  title: "New Employee Onboarding",
-  nodes: [
-    {
-      id: "1",
-      type: "step",
-      title: "Submit Hiring Request",
-      role: "Hiring Manager",
-      tools: ["HRIS", "Email"],
-      position: { x: 100, y: 100 },
-      tags: ["trigger"],
-      duration: { value: 15, unit: "minutes" },
-      attachments: [{ name: "Job Description Template.docx", type: "file" }],
-    },
-    {
-      id: "2",
-      type: "step",
-      title: "Create Job Listing",
-      role: "HR Specialist",
-      tools: ["ATS", "Job Board"],
-      position: { x: 400, y: 100 },
-      tags: [],
-      duration: { value: 2, unit: "hours" },
-    },
-    {
-      id: "3",
-      type: "step",
-      title: "Post to Platforms",
-      role: "HR Specialist",
-      tools: ["LinkedIn", "Indeed", "Company Website"],
-      position: { x: 700, y: 100 },
-      tags: ["automated"],
-      duration: { value: 30, unit: "minutes" },
-    },
-    {
-      id: "4",
-      type: "step",
-      title: "Screen Candidates",
-      role: "HR Specialist",
-      tools: ["ATS", "Phone"],
-      position: { x: 1000, y: 100 },
-      tags: ["friction"],
-      duration: { value: 4, unit: "hours" },
-      attachments: [
-        { name: "Screening Checklist.pdf", type: "file" },
-        { name: "Interview Questions.docx", type: "file" },
-      ],
-    },
-    {
-      id: "5",
-      type: "step",
-      title: "Interview Rounds",
-      role: "Hiring Manager",
-      tools: ["Zoom", "Calendar"],
-      position: { x: 400, y: 300 },
-      tags: ["handoff"],
-      duration: { value: 3, unit: "hours" },
-    },
-    {
-      id: "6",
-      type: "step",
-      title: "Make Offer",
-      role: "HR Manager",
-      tools: ["DocuSign", "Email"],
-      position: { x: 700, y: 300 },
-      tags: ["handoff"],
-      duration: { value: 1, unit: "hours" },
-      attachments: [{ name: "Offer Letter Template.docx", type: "file" }],
-    },
-    {
-      id: "7",
-      type: "step",
-      title: "Set Up IT Access",
-      role: "IT Administrator",
-      tools: ["Active Directory", "Slack", "Google Workspace"],
-      position: { x: 1000, y: 300 },
-      tags: ["friction"],
-      duration: { value: 2, unit: "days" },
-      attachments: [
-        { name: "IT Setup Checklist.pdf", type: "file" },
-        { name: "Security Guidelines", type: "link", url: "https://company.com/security" },
-      ],
-    },
-    {
-      id: "8",
-      type: "step",
-      title: "Welcome Session",
-      role: "HR Specialist",
-      tools: ["Zoom", "Presentation"],
-      position: { x: 700, y: 500 },
-      tags: [],
-      duration: { value: 1, unit: "hours" },
-      attachments: [{ name: "Welcome Presentation.pptx", type: "file" }],
-    },
-  ],
-  edges: [
-    { id: "e1", source: "1", target: "2" },
-    { id: "e2", source: "2", target: "3" },
-    { id: "e3", source: "3", target: "4" },
-    { id: "e4", source: "4", target: "5" },
-    { id: "e5", source: "5", target: "6" },
-    { id: "e6", source: "6", target: "7" },
-    { id: "e7", source: "7", target: "8" },
-  ],
+// Updated types for the new JSON structure
+type ProcessAnalysisData = {
+  processAnalysis: {
+    meta: {
+      processTitle: string
+      source: string
+      analysisDate: string
+    }
+    summary: {
+      metrics: {
+        stepCount: number
+        roleCount: number
+        frictionCount: number
+        handoffCount: number
+        automatedCount: number
+        estimatedDurationMinutes: number
+      }
+      roles: string[]
+      tools: string[]
+    }
+    insights: Array<{
+      id: string
+      title: string
+      description: string
+      type: "delay" | "friction" | "overlap"
+      severity: "high" | "medium" | "low"
+      icon: string
+    }>
+    aiOpportunities: Array<{
+      id: string
+      title: string
+      description: string
+      targetStepId: string
+      targetStepTitle: string
+      category:
+        | "classification"
+        | "decision"
+        | "summarization"
+        | "analysis"
+        | "communication"
+        | "generation"
+        | "automation"
+      impact: "high" | "medium" | "low"
+      icon: string
+    }>
+  }
 }
 
-// Sample AI opportunities with IDs for routing
-const opportunities: AIOpportunity[] = [
-  {
-    id: "auto-score-candidates",
-    title: "Auto-score candidates",
-    description:
-      "Use AI to automatically score candidates based on resume content and role criteria, reducing manual screening time by 70%",
-    stepId: "4",
-    stepTitle: "Screen Candidates",
-    category: "analysis",
-    impact: "high",
+// Sample data using the new structure
+const sampleData: ProcessAnalysisData = {
+  processAnalysis: {
+    meta: {
+      processTitle: "New Employee Onboarding",
+      source: "uploadedFlow",
+      analysisDate: "2025-06-19",
+    },
+    summary: {
+      metrics: {
+        stepCount: 8,
+        roleCount: 4,
+        frictionCount: 2,
+        handoffCount: 2,
+        automatedCount: 1,
+        estimatedDurationMinutes: 5040,
+      },
+      roles: ["Hiring Manager", "HR Specialist", "HR Manager", "IT Administrator"],
+      tools: [
+        "HRIS",
+        "Email",
+        "ATS",
+        "Job Board",
+        "LinkedIn",
+        "Indeed",
+        "Company Website",
+        "Phone",
+        "Zoom",
+        "Calendar",
+        "DocuSign",
+        "Active Directory",
+        "Slack",
+        "Google Workspace",
+      ],
+    },
+    insights: [
+      {
+        id: "1",
+        title: "Bottleneck Detected",
+        description: "Step 4 (Screen Candidates) takes 4 hours and has friction tags – this is your main bottleneck.",
+        type: "delay",
+        severity: "high",
+        icon: "alert-triangle",
+      },
+      {
+        id: "2",
+        title: "Multiple Handoffs",
+        description: "2 handoff points between roles may cause delays and miscommunication.",
+        type: "friction",
+        severity: "medium",
+        icon: "shuffle",
+      },
+      {
+        id: "3",
+        title: "Automation Opportunity",
+        description: "Only 1 of 8 steps are automated – significant efficiency gains possible.",
+        type: "opportunity",
+        severity: "medium",
+        icon: "zap",
+      },
+      {
+        id: "4",
+        title: "Tool Fragmentation",
+        description: "15 different tools used across the process – consider consolidation.",
+        type: "overlap",
+        severity: "low",
+        icon: "grid",
+      },
+    ],
+    aiOpportunities: [
+      {
+        id: "auto-score-candidates",
+        title: "Auto-score candidates",
+        description:
+          "Use AI to automatically score candidates based on resume content and role criteria, reducing manual screening time by 70%.",
+        targetStepId: "4",
+        targetStepTitle: "Screen Candidates",
+        category: "analysis",
+        impact: "high",
+        icon: "layers",
+      },
+      {
+        id: "summarize-feedback",
+        title: "Summarize interview feedback",
+        description:
+          "Automatically consolidate feedback from multiple interviewers into a structured decision summary.",
+        targetStepId: "5",
+        targetStepTitle: "Interview Rounds",
+        category: "summarization",
+        impact: "medium",
+        icon: "file-text",
+      },
+      {
+        id: "generate-checklist",
+        title: "Generate onboarding checklist",
+        description: "Auto-create personalized onboarding tasks based on role, department, and location requirements.",
+        targetStepId: "8",
+        targetStepTitle: "Welcome Session",
+        category: "generation",
+        impact: "medium",
+        icon: "clipboard-list",
+      },
+      {
+        id: "automate-offers",
+        title: "Automate offer letter creation",
+        description:
+          "Generate customized offer letters with correct compensation, benefits, and legal terms based on role and level.",
+        targetStepId: "6",
+        targetStepTitle: "Make Offer",
+        category: "generation",
+        impact: "high",
+        icon: "file-plus",
+      },
+      {
+        id: "smart-provisioning",
+        title: "Smart IT provisioning",
+        description:
+          "Automatically determine and provision required IT access, tools, and accounts based on role and team.",
+        targetStepId: "7",
+        targetStepTitle: "Set Up IT Access",
+        category: "automation",
+        impact: "high",
+        icon: "terminal",
+      },
+      {
+        id: "reference-automation",
+        title: "Reference check automation",
+        description: "Automate reference check requests and follow-ups via email templates.",
+        targetStepId: "4",
+        targetStepTitle: "Screen Candidates",
+        category: "automation",
+        impact: "low",
+        icon: "mail",
+      },
+    ],
   },
-  {
-    id: "summarize-feedback",
-    title: "Summarize interview feedback",
-    description: "Automatically consolidate feedback from multiple interviewers into a structured decision summary",
-    stepId: "5",
-    stepTitle: "Interview Rounds",
-    category: "summarization",
-    impact: "medium",
-  },
-  {
-    id: "generate-checklist",
-    title: "Generate onboarding checklist",
-    description: "Auto-create personalized onboarding tasks based on role, department, and location requirements",
-    stepId: "8",
-    stepTitle: "Welcome Session",
-    category: "generation",
-    impact: "medium",
-  },
-  {
-    id: "automate-offers",
-    title: "Automate offer letter creation",
-    description:
-      "Generate customized offer letters with correct compensation, benefits, and legal terms based on role and level",
-    stepId: "6",
-    stepTitle: "Make Offer",
-    category: "generation",
-    impact: "high",
-  },
-  {
-    id: "smart-provisioning",
-    title: "Smart IT provisioning",
-    description: "Automatically determine and provision required IT access, tools, and accounts based on role and team",
-    stepId: "7",
-    stepTitle: "Set Up IT Access",
-    category: "automation",
-    impact: "high",
-  },
-  {
-    id: "reference-automation",
-    title: "Reference check automation",
-    description: "Automate reference check requests and follow-ups via email templates",
-    stepId: "4",
-    stepTitle: "Screen Candidates",
-    category: "automation",
-    impact: "low",
-  },
-]
+}
 
 export default function ProcessAnalysisPage() {
   const [isLoading, setIsLoading] = useState(() => {
-    // Only show loading if we haven't processed this page in this session
     if (typeof window !== "undefined") {
       return !sessionStorage.getItem("process-analysis-processed")
     }
     return true
   })
   const router = useRouter()
+  const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false)
+  const [analysisData, setAnalysisData] = useState<ProcessAnalysisData>(sampleData)
 
-  const categoryIcons = {
-    automation: (
-      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-        />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    ),
-    summarization: (
-      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-        />
-      </svg>
-    ),
-    generation: (
-      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
-        />
-      </svg>
-    ),
-    analysis: (
-      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-        />
-      </svg>
-    ),
+  const formatDuration = (minutes: number) => {
+    if (minutes < 60) return `${minutes}m`
+    if (minutes < 480) return `${Math.round((minutes / 60) * 10) / 10}h`
+    if (minutes < 2400) return `${Math.round((minutes / 480) * 10) / 10}d`
+    return `${Math.round((minutes / 2400) * 10) / 10}w`
+  }
+
+  const severityColors = {
+    high: "bg-red-50 border-red-200 text-red-700",
+    medium: "bg-yellow-50 border-yellow-200 text-yellow-700",
+    low: "bg-blue-50 border-blue-200 text-blue-700",
+  }
+
+  const impactColors = {
+    high: "bg-green-100 border-green-200",
+    medium: "bg-yellow-100 border-yellow-200",
+    low: "bg-red-100 border-red-200",
   }
 
   const getIconColor = (impact: string) => {
@@ -243,11 +254,31 @@ export default function ProcessAnalysisPage() {
     }
   }
 
-  const impactColors = {
-    high: "bg-green-100 border-green-200",
-    medium: "bg-yellow-100 border-yellow-200",
-    low: "bg-red-100 border-red-200",
+  const handleProcessAnalysisOverride = (newData: ProcessAnalysisData) => {
+    setAnalysisData(newData)
+    console.log("Process analysis data updated:", newData)
   }
+
+  const getIconComponent = (iconName: string) => {
+    const iconMap: Record<string, React.ComponentType<any>> = {
+      "alert-triangle": AlertTriangle,
+      shuffle: Shuffle,
+      zap: Zap,
+      grid: Grid,
+      layers: Layers,
+      "file-text": FileText,
+      "clipboard-list": ClipboardList,
+      "file-plus": FilePlus,
+      terminal: Terminal,
+      mail: Mail,
+    }
+
+    const IconComponent = iconMap[iconName] || AlertTriangle
+    return <IconComponent className="h-4 w-4" />
+  }
+
+  const { processAnalysis } = analysisData
+  const { meta, summary, insights, aiOpportunities } = processAnalysis
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -279,7 +310,14 @@ export default function ProcessAnalysisPage() {
                 <div className="hidden md:block">
                   <h2 className="text-lg font-medium text-gray-700">Process Analysis</h2>
                 </div>
-                <div className="flex items-center">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setIsOverrideModalOpen(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors border border-gray-200"
+                  >
+                    <Code className="h-4 w-4" />
+                    Override Data
+                  </button>
                   <div className="flex items-center gap-2 text-sm text-green-600">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                     <span>Analysis complete</span>
@@ -297,7 +335,116 @@ export default function ProcessAnalysisPage() {
               {/* Process Summary Section */}
               <section aria-labelledby="process-summary-title">
                 <div className="bg-white shadow-sm rounded-lg p-6 md:p-8">
-                  <ProcessSummary flowData={sampleFlowData} />
+                  <div className="space-y-6">
+                    <div>
+                      <h2 className="text-2xl font-semibold text-gray-900 mb-4">Process Summary</h2>
+                      <p className="text-gray-600 mb-6">
+                        Overview of your {meta.processTitle} process structure and key metrics.
+                      </p>
+                    </div>
+
+                    {/* Metrics Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                      <div className="bg-white rounded-lg border border-gray-200 p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <Play className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <div className="text-2xl font-bold text-gray-900">{summary.metrics.stepCount}</div>
+                            <div className="text-sm text-gray-500">Steps</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-lg border border-gray-200 p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center">
+                            <Users className="h-5 w-5 text-violet-600" />
+                          </div>
+                          <div>
+                            <div className="text-2xl font-bold text-gray-900">{summary.metrics.roleCount}</div>
+                            <div className="text-sm text-gray-500">Roles</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-lg border border-gray-200 p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                            <AlertTriangle className="h-5 w-5 text-red-600" />
+                          </div>
+                          <div>
+                            <div className="text-2xl font-bold text-gray-900">{summary.metrics.frictionCount}</div>
+                            <div className="text-sm text-gray-500">Friction Points</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-lg border border-gray-200 p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                            <Clock className="h-5 w-5 text-green-600" />
+                          </div>
+                          <div>
+                            <div className="text-2xl font-bold text-gray-900">
+                              {formatDuration(summary.metrics.estimatedDurationMinutes)}
+                            </div>
+                            <div className="text-sm text-gray-500">Est. Duration</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Process Details */}
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="bg-white rounded-lg border border-gray-200 p-6">
+                        <h3 className="font-semibold text-gray-900 mb-4">Roles Involved</h3>
+                        <div className="space-y-2">
+                          {summary.roles.map((role) => (
+                            <div key={role} className="flex items-center gap-3">
+                              <div className="w-2 h-2 bg-violet-400 rounded-full"></div>
+                              <span className="text-sm text-gray-700">{role}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-lg border border-gray-200 p-6">
+                        <h3 className="font-semibold text-gray-900 mb-4">Tools & Systems</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {summary.tools.slice(0, 8).map((tool) => (
+                            <span key={tool} className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-sm">
+                              {tool}
+                            </span>
+                          ))}
+                          {summary.tools.length > 8 && (
+                            <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-md text-sm">
+                              +{summary.tools.length - 8} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* AI Insights */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-4">AI-Generated Insights</h3>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {insights.map((insight) => (
+                          <div key={insight.id} className={`rounded-lg border p-4 ${severityColors[insight.severity]}`}>
+                            <div className="flex items-start gap-3">
+                              <div className="flex-shrink-0 mt-0.5">{getIconComponent(insight.icon)}</div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium mb-1">{insight.title}</h4>
+                                <p className="text-sm opacity-90">{insight.description}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </section>
 
@@ -314,7 +461,7 @@ export default function ProcessAnalysisPage() {
 
                   {/* Compact Grid Layout */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {opportunities.map((opportunity) => (
+                    {aiOpportunities.map((opportunity) => (
                       <div
                         key={opportunity.id}
                         onClick={() => router.push(`/opportunity/${opportunity.id}`)}
@@ -324,7 +471,7 @@ export default function ProcessAnalysisPage() {
                           <div
                             className={`w-8 h-8 rounded-lg flex items-center justify-center ${getIconColor(opportunity.impact)}`}
                           >
-                            {categoryIcons[opportunity.category]}
+                            <div className="text-white">{getIconComponent(opportunity.icon)}</div>
                           </div>
                           <span
                             className={`text-xs font-medium px-2 py-1 rounded ${
@@ -341,7 +488,7 @@ export default function ProcessAnalysisPage() {
                         <h3 className="font-semibold text-gray-900 mb-2">{opportunity.title}</h3>
                         <p className="text-sm text-gray-600 mb-3">{opportunity.description}</p>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-500">{opportunity.stepTitle}</span>
+                          <span className="text-xs text-gray-500">{opportunity.targetStepTitle}</span>
                           <svg
                             className="w-4 h-4 text-gray-400 group-hover:text-violet-600 transition-colors"
                             fill="none"
@@ -371,11 +518,16 @@ export default function ProcessAnalysisPage() {
               </button>
               <div className="flex items-center gap-4">
                 <div className="text-xs text-violet-200 font-mono hidden sm:block">
-                  {opportunities.length} AI opportunities identified
+                  {aiOpportunities.length} AI opportunities identified
                 </div>
               </div>
             </div>
           </footer>
+          <ProcessAnalysisOverrideModal
+            isOpen={isOverrideModalOpen}
+            onClose={() => setIsOverrideModalOpen(false)}
+            onSubmit={handleProcessAnalysisOverride}
+          />
         </>
       )}
     </div>
