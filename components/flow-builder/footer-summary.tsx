@@ -29,7 +29,7 @@ export function FooterSummary({ flowData }: FooterSummaryProps) {
             {stepCount} steps • {roleCount} roles • {frictionCount} friction points
           </div>
           <button
-            onClick={() => router.push("/analysis")}
+            onClick={() => router.push("/process-analysis")}
             className="text-sm font-medium px-4 py-2 rounded-md bg-white text-violet-600 hover:bg-violet-50 transition-colors flex items-center gap-2 shadow-sm"
           >
             <Sparkles className="h-4 w-4" />

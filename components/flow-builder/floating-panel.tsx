@@ -12,20 +12,7 @@ type FloatingPanelProps = {
 }
 
 export function FloatingPanel({ node, position, onClose, onUpdate }: FloatingPanelProps) {
-  const [aiPrompt, setAiPrompt] = useState("")
-  const [showAiResponse, setShowAiResponse] = useState(false)
   const [showToolsDropdown, setShowToolsDropdown] = useState(false)
-
-  const handleAiSubmit = () => {
-    if (aiPrompt.trim()) {
-      setShowAiResponse(true)
-      // Simulate AI response delay
-      setTimeout(() => {
-        setShowAiResponse(false)
-        setAiPrompt("")
-      }, 3000)
-    }
-  }
 
   const toggleTag = (tag: "friction" | "handoff" | "automated" | "trigger") => {
     const currentTags = node.tags || []
@@ -44,9 +31,21 @@ export function FloatingPanel({ node, position, onClose, onUpdate }: FloatingPan
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [showToolsDropdown])
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element
+      if (!target.closest(".floating-panel") && !target.closest(".flow-node")) {
+        onClose()
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [onClose])
+
   return (
     <div
-      className="fixed bg-white rounded-lg border shadow-xl p-3 w-[400px] z-50"
+      className="floating-panel fixed bg-white rounded-lg border shadow-xl p-3 w-[400px] z-50"
       style={{
         left: position.x + 10,
         top: position.y - 10,
@@ -76,7 +75,7 @@ export function FloatingPanel({ node, position, onClose, onUpdate }: FloatingPan
         <button
           title="Friction Point"
           onClick={() => toggleTag("friction")}
-          className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all duration-150 text-xs font-medium whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all duration-150 text-xs font-medium ${
             node.tags?.includes("friction")
               ? "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
               : "text-gray-500 border border-gray-200 hover:bg-gray-100 hover:text-gray-700"
@@ -88,7 +87,7 @@ export function FloatingPanel({ node, position, onClose, onUpdate }: FloatingPan
         <button
           title="Handoff"
           onClick={() => toggleTag("handoff")}
-          className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all duration-150 text-xs font-medium whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all duration-150 text-xs font-medium ${
             node.tags?.includes("handoff")
               ? "bg-violet-50 text-violet-600 border border-violet-200 hover:bg-violet-100"
               : "text-gray-500 border border-gray-200 hover:bg-gray-100 hover:text-gray-700"
@@ -100,19 +99,19 @@ export function FloatingPanel({ node, position, onClose, onUpdate }: FloatingPan
         <button
           title="Automated"
           onClick={() => toggleTag("automated")}
-          className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all duration-150 text-xs font-medium whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all duration-150 text-xs font-medium ${
             node.tags?.includes("automated")
               ? "bg-green-50 text-green-600 border border-green-200 hover:bg-green-100"
               : "text-gray-500 border border-gray-200 hover:bg-gray-100 hover:text-gray-700"
           }`}
         >
           <Zap className="h-3.5 w-3.5" />
-          <span>Automated</span>
+          <span>Auto</span>
         </button>
         <button
           title="Trigger"
           onClick={() => toggleTag("trigger")}
-          className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all duration-150 text-xs font-medium whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all duration-150 text-xs font-medium ${
             node.tags?.includes("trigger")
               ? "bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100"
               : "text-gray-500 border border-gray-200 hover:bg-gray-100 hover:text-gray-700"
@@ -294,40 +293,6 @@ export function FloatingPanel({ node, position, onClose, onUpdate }: FloatingPan
             <Paperclip className="h-3.5 w-3.5" />
             <span>Attach files...</span>
           </button>
-        </div>
-
-        {/* AI Flow Modification Chat Section */}
-        <div className="pt-3 border-t border-gray-200">
-          <div className="bg-gray-50 rounded-md p-3">
-            <label className="block text-xs font-medium text-gray-700 mb-2">Modify Flow with AI</label>
-            <div className="bg-white border border-gray-200 rounded-md focus-within:border-violet-300 focus-within:ring-2 focus-within:ring-violet-100 transition-all">
-              <div className="flex items-end gap-2 p-2">
-                <textarea
-                  value={aiPrompt}
-                  onChange={(e) => setAiPrompt(e.target.value)}
-                  placeholder="Example: Split this step into two parts - one for initial screening and another for reference checks"
-                  className="flex-1 resize-none outline-none bg-transparent text-gray-900 placeholder-gray-400 text-xs min-h-[28px] max-h-[60px] overflow-y-auto"
-                  rows={1}
-                />
-                <button
-                  onClick={handleAiSubmit}
-                  disabled={!aiPrompt.trim() || showAiResponse}
-                  className={`p-1.5 rounded-md transition-all flex-shrink-0 ${
-                    aiPrompt.trim()
-                      ? "bg-violet-600 text-white hover:bg-violet-700 shadow-sm"
-                      : "bg-gray-200 text-gray-400"
-                  }`}
-                >
-                  <ArrowRight className="h-3 w-3" />
-                </button>
-              </div>
-            </div>
-            {showAiResponse && (
-              <div className="bg-blue-50 rounded-md p-2 text-xs text-blue-700 mt-2">
-                <div className="animate-pulse">Analyzing and modifying your flow...</div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

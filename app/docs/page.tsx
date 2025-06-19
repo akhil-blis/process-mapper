@@ -29,6 +29,11 @@ export default function PrototypingDocsPage() {
     window.scrollTo(0, 0)
   }, [])
 
+  useEffect(() => {
+    // Redirect to a default opportunity for now
+    router.replace("/prototype-handover/auto-score-candidates")
+  }, [router])
+
   const downloadableFiles: DownloadableFile[] = [
     {
       id: "success-framework",

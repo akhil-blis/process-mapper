@@ -39,12 +39,6 @@ export function FlowNodeComponent({ node, isSelected, onSelect }: FlowNodeProps)
       }}
       onClick={() => onSelect(node.id)}
     >
-      {/* Connection Points */}
-      <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-gray-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-      <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-gray-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-      <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-gray-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-gray-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-
       {/* Node Header */}
       <div className="flex items-start justify-between p-4 pb-3">
         <div className="flex-1 min-w-0">
@@ -106,11 +100,6 @@ export function FlowNodeComponent({ node, isSelected, onSelect }: FlowNodeProps)
           )}
         </div>
       </div>
-
-      {/* Selection Indicator */}
-      {isSelected && (
-        <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-violet-500 rounded-full border-2 border-white shadow-sm" />
-      )}
     </div>
   )
 }

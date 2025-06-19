@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Square, FileText, GitBranch, Play, StopCircle } from "lucide-react"
+import { Square, FileText, GitBranch, Play, StopCircle, Code, Download } from "lucide-react"
 
 type PaletteItem = {
   id: string
@@ -13,7 +13,12 @@ type PaletteItem = {
   color: string
 }
 
-export function ToolPalette() {
+type ToolPaletteProps = {
+  onOverrideClick?: () => void
+  onExportClick?: () => void
+}
+
+export function ToolPalette({ onOverrideClick, onExportClick }: ToolPaletteProps) {
   const [draggedItem, setDraggedItem] = useState<string | null>(null)
 
   const paletteItems: PaletteItem[] = [
@@ -59,6 +64,20 @@ export function ToolPalette() {
       icon: <StopCircle className="h-4 w-4" />,
       color: "bg-red-50 text-red-600",
     },
+    {
+      id: "override",
+      type: "override",
+      label: "Override",
+      icon: <Code className="h-4 w-4" />,
+      color: "bg-orange-50 text-orange-600",
+    },
+    {
+      id: "export",
+      type: "export",
+      label: "Export",
+      icon: <Download className="h-4 w-4" />,
+      color: "bg-indigo-50 text-indigo-600",
+    },
   ]
 
   const handleDragStart = (e: React.DragEvent, itemId: string) => {
@@ -70,6 +89,14 @@ export function ToolPalette() {
     setDraggedItem(null)
   }
 
+  const handleItemClick = (itemId: string) => {
+    if (itemId === "override" && onOverrideClick) {
+      onOverrideClick()
+    } else if (itemId === "export" && onExportClick) {
+      onExportClick()
+    }
+  }
+
   return (
     <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40">
       <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-3 space-y-2">
@@ -77,12 +104,15 @@ export function ToolPalette() {
         {paletteItems.map((item) => (
           <div
             key={item.id}
-            draggable
-            onDragStart={(e) => handleDragStart(e, item.id)}
-            onDragEnd={handleDragEnd}
+            draggable={item.id !== "override" && item.id !== "export"}
+            onDragStart={
+              item.id !== "override" && item.id !== "export" ? (e) => handleDragStart(e, item.id) : undefined
+            }
+            onDragEnd={item.id !== "override" && item.id !== "export" ? handleDragEnd : undefined}
+            onClick={() => handleItemClick(item.id)}
             className={`
-            flex items-center gap-2 px-3 py-2 rounded-md cursor-grab active:cursor-grabbing
-            transition-all duration-200 hover:bg-gray-100
+            flex items-center gap-2 px-3 py-2 rounded-md transition-all duration-200 hover:bg-gray-100
+            ${item.id === "override" || item.id === "export" ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"}
             ${draggedItem === item.id ? "opacity-50" : ""}
             ${item.color}
           `}

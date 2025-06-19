@@ -7,7 +7,7 @@ export type FlowNode = {
   role?: string
   tools?: string[]
   notes?: string
-  position: { x: number; y: number }
+  position: { row: number; column: number }
   tags: Array<"friction" | "handoff" | "automated" | "trigger">
   duration?: {
     value: number

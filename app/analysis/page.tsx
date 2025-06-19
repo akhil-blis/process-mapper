@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import type { FlowData } from "@/types/flow"
 import type { PrototypePlan } from "@/types/prototype"
@@ -174,6 +174,14 @@ export default function ProcessAnalysisPage() {
     return true
   })
   const router = useRouter()
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (!sessionStorage.getItem("analysis-processed")) {
+        router.replace("/process-analysis")
+      }
+    }
+  }, [router])
 
   // This function would be passed to the AIAssistant to handle its suggestions
   // For now, it just logs. In a real app, it would parse the suggestion and modify prototypePlan.
