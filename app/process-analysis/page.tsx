@@ -20,6 +20,7 @@ import {
   FilePlus,
   Terminal,
   Mail,
+  Download,
 } from "lucide-react"
 import { Logo } from "@/components/logo"
 import { AILoading } from "@/components/ai-loading"
@@ -277,6 +278,82 @@ export default function ProcessAnalysisPage() {
     return <IconComponent className="h-4 w-4" />
   }
 
+  const handleExportOpportunity = (opportunity: any) => {
+    // Compile context information for the specific opportunity
+    const exportData = {
+      exportMetadata: {
+        exportedAt: new Date().toISOString(),
+        exportType: "ai-opportunity-context",
+        opportunityId: opportunity.id,
+        processTitle: meta.processTitle,
+      },
+      processContext: {
+        meta: {
+          processTitle: meta.processTitle,
+          source: meta.source,
+          analysisDate: meta.analysisDate,
+        },
+        summary: {
+          metrics: summary.metrics,
+          roles: summary.roles,
+          tools: summary.tools,
+        },
+        relevantInsights: insights.filter(
+          (insight) =>
+            // Include insights that might be relevant to this opportunity
+            insight.type === "delay" || insight.type === "friction" || insight.severity === "high",
+        ),
+      },
+      aiOpportunity: {
+        id: opportunity.id,
+        title: opportunity.title,
+        description: opportunity.description,
+        targetStepId: opportunity.targetStepId,
+        targetStepTitle: opportunity.targetStepTitle,
+        category: opportunity.category,
+        impact: opportunity.impact,
+        icon: opportunity.icon,
+      },
+      implementationContext: {
+        estimatedTimeReduction: opportunity.impact === "high" ? "70%" : opportunity.impact === "medium" ? "40%" : "20%",
+        affectedRoles: summary.roles.filter(
+          (role) =>
+            // Filter roles that might be affected by this opportunity
+            role.toLowerCase().includes("hr") ||
+            role.toLowerCase().includes("manager") ||
+            role.toLowerCase().includes("specialist"),
+        ),
+        relevantTools: summary.tools.filter((tool) =>
+          // Filter tools that might be relevant to this opportunity
+          opportunity.category === "automation"
+            ? true
+            : opportunity.category === "analysis"
+              ? ["ATS", "HRIS", "LinkedIn", "Indeed"].includes(tool)
+              : opportunity.category === "generation"
+                ? ["Email", "DocuSign", "Google Workspace"].includes(tool)
+                : true,
+        ),
+      },
+    }
+
+    // Create and download the JSON file
+    const jsonString = JSON.stringify(exportData, null, 2)
+    const blob = new Blob([jsonString], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `${opportunity.id}-context-${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    // Clean up the URL
+    URL.revokeObjectURL(url)
+
+    console.log(`Exported context for opportunity: ${opportunity.title}`)
+  }
+
   const { processAnalysis } = analysisData
   const { meta, summary, insights, aiOpportunities } = processAnalysis
 
@@ -302,10 +379,13 @@ export default function ProcessAnalysisPage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex items-center justify-between h-16">
                 <div className="flex items-center">
-                  <div className="flex-shrink-0 flex items-center">
+                  <button
+                    onClick={() => router.push("/")}
+                    className="flex-shrink-0 flex items-center hover:opacity-80 transition-opacity"
+                  >
                     <Logo />
                     <span className="ml-2.5 font-semibold text-gray-800 text-lg">Process Mapper</span>
-                  </div>
+                  </button>
                 </div>
                 <div className="hidden md:block">
                   <h2 className="text-lg font-medium text-gray-700">Process Analysis</h2>
@@ -473,17 +553,29 @@ export default function ProcessAnalysisPage() {
                           >
                             <div className="text-white">{getIconComponent(opportunity.icon)}</div>
                           </div>
-                          <span
-                            className={`text-xs font-medium px-2 py-1 rounded ${
-                              opportunity.impact === "high"
-                                ? "text-green-800 bg-green-200"
-                                : opportunity.impact === "medium"
-                                  ? "text-yellow-800 bg-yellow-200"
-                                  : "text-red-800 bg-red-200"
-                            }`}
-                          >
-                            {opportunity.impact.charAt(0).toUpperCase() + opportunity.impact.slice(1)} Impact
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-xs font-medium px-2 py-1 rounded ${
+                                opportunity.impact === "high"
+                                  ? "text-green-800 bg-green-200"
+                                  : opportunity.impact === "medium"
+                                    ? "text-yellow-800 bg-yellow-200"
+                                    : "text-red-800 bg-red-200"
+                              }`}
+                            >
+                              {opportunity.impact.charAt(0).toUpperCase() + opportunity.impact.slice(1)} Impact
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleExportOpportunity(opportunity)
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+                              title="Export opportunity context"
+                            >
+                              <Download className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
                         <h3 className="font-semibold text-gray-900 mb-2">{opportunity.title}</h3>
                         <p className="text-sm text-gray-600 mb-3">{opportunity.description}</p>

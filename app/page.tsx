@@ -30,10 +30,13 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 relative">
             <div className="flex items-center">
-              <div className="flex-shrink-0 flex items-center">
+              <button
+                onClick={() => router.push("/")}
+                className="flex-shrink-0 flex items-center hover:opacity-80 transition-opacity"
+              >
                 <Logo />
                 <span className="ml-2.5 font-semibold text-gray-800 text-lg">Process Mapper</span>
-              </div>
+              </button>
             </div>
             <div className="flex items-center">
               <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-semibold text-xs">
