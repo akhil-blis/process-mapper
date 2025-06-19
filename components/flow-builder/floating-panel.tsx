@@ -76,46 +76,50 @@ export function FloatingPanel({ node, position, onClose, onUpdate }: FloatingPan
         <button
           title="Friction Point"
           onClick={() => toggleTag("friction")}
-          className={`flex-1 p-2 rounded-md transition-all duration-150 ${
+          className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all duration-150 text-xs font-medium whitespace-nowrap ${
             node.tags?.includes("friction")
               ? "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
               : "text-gray-500 border border-gray-200 hover:bg-gray-100 hover:text-gray-700"
           }`}
         >
-          <AlertTriangle className="h-4 w-4 mx-auto" />
+          <AlertTriangle className="h-3.5 w-3.5" />
+          <span>Friction</span>
         </button>
         <button
           title="Handoff"
           onClick={() => toggleTag("handoff")}
-          className={`flex-1 p-2 rounded-md transition-all duration-150 ${
+          className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all duration-150 text-xs font-medium whitespace-nowrap ${
             node.tags?.includes("handoff")
               ? "bg-violet-50 text-violet-600 border border-violet-200 hover:bg-violet-100"
               : "text-gray-500 border border-gray-200 hover:bg-gray-100 hover:text-gray-700"
           }`}
         >
-          <ArrowRight className="h-4 w-4 mx-auto" />
+          <ArrowRight className="h-3.5 w-3.5" />
+          <span>Handoff</span>
         </button>
         <button
           title="Automated"
           onClick={() => toggleTag("automated")}
-          className={`flex-1 p-2 rounded-md transition-all duration-150 ${
+          className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all duration-150 text-xs font-medium whitespace-nowrap ${
             node.tags?.includes("automated")
               ? "bg-green-50 text-green-600 border border-green-200 hover:bg-green-100"
               : "text-gray-500 border border-gray-200 hover:bg-gray-100 hover:text-gray-700"
           }`}
         >
-          <Zap className="h-4 w-4 mx-auto" />
+          <Zap className="h-3.5 w-3.5" />
+          <span>Automated</span>
         </button>
         <button
           title="Trigger"
           onClick={() => toggleTag("trigger")}
-          className={`flex-1 p-2 rounded-md transition-all duration-150 ${
+          className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all duration-150 text-xs font-medium whitespace-nowrap ${
             node.tags?.includes("trigger")
               ? "bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100"
               : "text-gray-500 border border-gray-200 hover:bg-gray-100 hover:text-gray-700"
           }`}
         >
-          <Play className="h-4 w-4 mx-auto" />
+          <Play className="h-3.5 w-3.5" />
+          <span>Trigger</span>
         </button>
       </div>
 

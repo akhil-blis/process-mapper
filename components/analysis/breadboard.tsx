@@ -9,7 +9,7 @@ import type {
   PrototypeConnection,
   ElementType,
 } from "@/types/prototype"
-import { Plus, X, Info, MousePointer, FormInput, Trash2 } from "lucide-react"
+import { Plus, X, Info, MousePointer, Type, Trash2 } from "lucide-react"
 import { AIAssistant } from "./ai-assistant" // Import the AI Assistant
 
 // --- ADJUSTED LAYOUT CONSTANTS for a more compact design ---
@@ -35,184 +35,12 @@ const CANVAS_PADDING_Y = 40
 // --- END LAYOUT CONSTANTS ---
 
 type BreadboardProps = {
-  prototypePlan?: PrototypePlan
+  prototypePlan: PrototypePlan
   onUpdate: (plan: PrototypePlan) => void
   onAISuggestion: (suggestion: string) => void
 }
 
 export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: BreadboardProps) {
-  // Initialize with the Auto-score Candidates flow if no prototypePlan is provided
-  const initialPrototypePlan: PrototypePlan = {
-    screens: [
-      {
-        id: "screen-resume-upload",
-        title: "Resume Upload",
-        position: { x: 0, y: 0 },
-        elements: [
-          {
-            id: "element-upload-resume",
-            type: "input",
-            label: "Upload Resume",
-            screenId: "screen-resume-upload",
-            position: { x: 0, y: 0 },
-          },
-          {
-            id: "element-upload-cover-letter",
-            type: "input",
-            label: "Upload Cover Letter",
-            screenId: "screen-resume-upload",
-            position: { x: 0, y: 0 },
-          },
-          {
-            id: "element-enter-application-id",
-            type: "input",
-            label: "Enter Application ID",
-            screenId: "screen-resume-upload",
-            position: { x: 0, y: 0 },
-          },
-          {
-            id: "element-submit-application",
-            type: "action",
-            label: "Submit Application",
-            screenId: "screen-resume-upload",
-            position: { x: 0, y: 0 },
-          },
-        ],
-      },
-      {
-        id: "screen-resume-parser",
-        title: "Resume Parser",
-        position: { x: 0, y: 0 },
-        elements: [
-          {
-            id: "element-extracted-skills",
-            type: "info",
-            label: "Extracted Skills",
-            screenId: "screen-resume-parser",
-            position: { x: 0, y: 0 },
-          },
-          {
-            id: "element-experience-summary",
-            type: "info",
-            label: "Experience Summary",
-            screenId: "screen-resume-parser",
-            position: { x: 0, y: 0 },
-          },
-          {
-            id: "element-education-tags",
-            type: "info",
-            label: "Education Tags",
-            screenId: "screen-resume-parser",
-            position: { x: 0, y: 0 },
-          },
-          {
-            id: "element-send-to-scoring-engine",
-            type: "action",
-            label: "Send to Scoring Engine",
-            screenId: "screen-resume-parser",
-            position: { x: 0, y: 0 },
-          },
-        ],
-      },
-      {
-        id: "screen-ai-scorecard",
-        title: "AI Scorecard",
-        position: { x: 0, y: 0 },
-        elements: [
-          {
-            id: "element-match-percentage",
-            type: "info",
-            label: "Match %",
-            screenId: "screen-ai-scorecard",
-            position: { x: 0, y: 0 },
-          },
-          {
-            id: "element-top-strengths",
-            type: "info",
-            label: "Top Strengths",
-            screenId: "screen-ai-scorecard",
-            position: { x: 0, y: 0 },
-          },
-          {
-            id: "element-areas-of-concern",
-            type: "info",
-            label: "Areas of Concern",
-            screenId: "screen-ai-scorecard",
-            position: { x: 0, y: 0 },
-          },
-          {
-            id: "element-confidence-level",
-            type: "info",
-            label: "Confidence Level",
-            screenId: "screen-ai-scorecard",
-            position: { x: 0, y: 0 },
-          },
-          {
-            id: "element-send-for-review",
-            type: "action",
-            label: "Send for Review",
-            screenId: "screen-ai-scorecard",
-            position: { x: 0, y: 0 },
-          },
-        ],
-      },
-      {
-        id: "screen-review-tag",
-        title: "Review & Tag",
-        position: { x: 0, y: 0 },
-        elements: [
-          {
-            id: "element-hr-notes",
-            type: "input",
-            label: "HR Notes",
-            screenId: "screen-review-tag",
-            position: { x: 0, y: 0 },
-          },
-          {
-            id: "element-flag-manual-review",
-            type: "action",
-            label: "Flag for Manual Review",
-            screenId: "screen-review-tag",
-            position: { x: 0, y: 0 },
-          },
-          {
-            id: "element-add-to-talent-pool",
-            type: "action",
-            label: "Add to Talent Pool",
-            screenId: "screen-review-tag",
-            position: { x: 0, y: 0 },
-          },
-          {
-            id: "element-open-evaluator-tools",
-            type: "action",
-            label: "Open Evaluator Tools",
-            screenId: "screen-review-tag",
-            position: { x: 0, y: 0 },
-          },
-        ],
-      },
-    ],
-    connections: [
-      {
-        id: "conn-submit-to-parser",
-        fromElementId: "element-submit-application",
-        toScreenId: "screen-resume-parser",
-      },
-      {
-        id: "conn-parser-to-scorecard",
-        fromElementId: "element-send-to-scoring-engine",
-        toScreenId: "screen-ai-scorecard",
-      },
-      {
-        id: "conn-scorecard-to-review",
-        fromElementId: "element-send-for-review",
-        toScreenId: "screen-review-tag",
-      },
-    ],
-  }
-
-  const currentPlan = prototypePlan || initialPrototypePlan
-
   const [selectedScreenId, setSelectedScreenId] = useState<string | null>(null)
   const [connectingFromElement, setConnectingFromElement] = useState<string | null>(null)
   const [showElementMenu, setShowElementMenu] = useState<string | null>(null)
@@ -225,7 +53,7 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
   const elementIcons = {
     info: <Info className="h-3 w-3" />,
     action: <MousePointer className="h-3 w-3" />,
-    input: <FormInput className="h-3 w-3" />,
+    input: <Type className="h-3 w-3" />,
   }
 
   const elementColors: Record<ElementType, string> = {
@@ -239,8 +67,8 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
       if (!breadboardContainerRef.current) return
 
       let maxScreenHeight = SCREEN_CARD_MIN_HEIGHT_FOR_LAYOUT
-      if (currentPlan.screens.length > 0) {
-        maxScreenHeight = currentPlan.screens.reduce((maxH, screen) => {
+      if (prototypePlan.screens.length > 0) {
+        maxScreenHeight = prototypePlan.screens.reduce((maxH, screen) => {
           const elementsHeight =
             screen.elements.length * (ELEMENT_CHIP_HEIGHT + ELEMENT_CHIP_SPACING_Y) -
             (screen.elements.length > 0 ? ELEMENT_CHIP_SPACING_Y : 0)
@@ -249,10 +77,10 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
         }, SCREEN_CARD_MIN_HEIGHT_FOR_LAYOUT)
       }
 
-      const numRows = Math.max(1, Math.ceil(currentPlan.screens.length / GRID_COLS))
+      const numRows = Math.max(1, Math.ceil(prototypePlan.screens.length / GRID_COLS))
       const requiredHeight = CANVAS_PADDING_Y * 2 + numRows * maxScreenHeight + Math.max(0, numRows - 1) * GRID_ROW_GAP
 
-      const numCols = Math.min(currentPlan.screens.length, GRID_COLS)
+      const numCols = Math.min(prototypePlan.screens.length, GRID_COLS)
       const requiredWidth = CANVAS_PADDING_X * 2 + numCols * SCREEN_CARD_WIDTH + Math.max(0, numCols - 1) * GRID_COL_GAP
 
       const parentWidth = breadboardContainerRef.current.clientWidth
@@ -266,12 +94,12 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
     calculateCanvasSize()
     window.addEventListener("resize", calculateCanvasSize)
     return () => window.removeEventListener("resize", calculateCanvasSize)
-  }, [currentPlan.screens])
+  }, [prototypePlan.screens])
 
   const getGridPosition = (index: number) => {
     let maxScreenHeightInRows = SCREEN_CARD_MIN_HEIGHT_FOR_LAYOUT
-    if (currentPlan.screens.length > 0) {
-      maxScreenHeightInRows = currentPlan.screens.reduce((maxH, screen) => {
+    if (prototypePlan.screens.length > 0) {
+      maxScreenHeightInRows = prototypePlan.screens.reduce((maxH, screen) => {
         const elementsHeight =
           screen.elements.length * (ELEMENT_CHIP_HEIGHT + ELEMENT_CHIP_SPACING_Y) -
           (screen.elements.length > 0 ? ELEMENT_CHIP_SPACING_Y : 0)
@@ -290,7 +118,7 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
   }
 
   const getScreensWithCalculatedPositions = () => {
-    return currentPlan.screens.map((screen, index) => ({
+    return prototypePlan.screens.map((screen, index) => ({
       ...screen,
       position: getGridPosition(index),
     }))
@@ -303,29 +131,29 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
       position: { x: 0, y: 0 },
       elements: [],
     }
-    onUpdate({ ...currentPlan, screens: [...currentPlan.screens, newScreen] })
+    onUpdate({ ...prototypePlan, screens: [...prototypePlan.screens, newScreen] })
   }
 
   const updateScreenTitle = (screenId: string, title: string) => {
     onUpdate({
-      ...currentPlan,
-      screens: currentPlan.screens.map((s) => (s.id === screenId ? { ...s, title } : s)),
+      ...prototypePlan,
+      screens: prototypePlan.screens.map((s) => (s.id === screenId ? { ...s, title } : s)),
     })
   }
 
   const deleteScreen = (screenId: string) => {
     onUpdate({
-      screens: currentPlan.screens.filter((s) => s.id !== screenId),
-      connections: currentPlan.connections.filter(
+      screens: prototypePlan.screens.filter((s) => s.id !== screenId),
+      connections: prototypePlan.connections.filter(
         (conn) =>
           conn.toScreenId !== screenId &&
-          !currentPlan.screens.find((s) => s.id === screenId)?.elements.some((e) => e.id === conn.fromElementId),
+          !prototypePlan.screens.find((s) => s.id === screenId)?.elements.some((e) => e.id === conn.fromElementId),
       ),
     })
   }
 
   const addElementToScreen = (screenId: string, type: ElementType) => {
-    const screen = currentPlan.screens.find((s) => s.id === screenId)
+    const screen = prototypePlan.screens.find((s) => s.id === screenId)
     if (!screen) return
     const newElement: PrototypeElement = {
       id: `element-${Date.now()}`,
@@ -335,8 +163,8 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
       position: { x: 0, y: 0 },
     }
     onUpdate({
-      ...currentPlan,
-      screens: currentPlan.screens.map((s) =>
+      ...prototypePlan,
+      screens: prototypePlan.screens.map((s) =>
         s.id === screenId ? { ...s, elements: [...s.elements, newElement] } : s,
       ),
     })
@@ -345,8 +173,8 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
 
   const updateElementLabel = (elementId: string, label: string) => {
     onUpdate({
-      ...currentPlan,
-      screens: currentPlan.screens.map((s) => ({
+      ...prototypePlan,
+      screens: prototypePlan.screens.map((s) => ({
         ...s,
         elements: s.elements.map((el) => (el.id === elementId ? { ...el, label } : el)),
       })),
@@ -355,12 +183,12 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
 
   const deleteElementFromScreen = (elementId: string) => {
     onUpdate({
-      ...currentPlan,
-      screens: currentPlan.screens.map((s) => ({
+      ...prototypePlan,
+      screens: prototypePlan.screens.map((s) => ({
         ...s,
         elements: s.elements.filter((el) => el.id !== elementId),
       })),
-      connections: currentPlan.connections.filter((conn) => conn.fromElementId !== elementId),
+      connections: prototypePlan.connections.filter((conn) => conn.fromElementId !== elementId),
     })
   }
 
@@ -370,7 +198,7 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
 
   const handleScreenDotClick = (screenId: string) => {
     if (connectingFromElement) {
-      const existing = currentPlan.connections.find(
+      const existing = prototypePlan.connections.find(
         (c) => c.fromElementId === connectingFromElement && c.toScreenId === screenId,
       )
       if (!existing) {
@@ -379,14 +207,14 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
           fromElementId: connectingFromElement,
           toScreenId: screenId,
         }
-        onUpdate({ ...currentPlan, connections: [...currentPlan.connections, newConnection] })
+        onUpdate({ ...prototypePlan, connections: [...prototypePlan.connections, newConnection] })
       }
       setConnectingFromElement(null)
     }
   }
 
   const deleteConnection = (connectionId: string) => {
-    onUpdate({ ...currentPlan, connections: currentPlan.connections.filter((c) => c.id !== connectionId) })
+    onUpdate({ ...prototypePlan, connections: prototypePlan.connections.filter((c) => c.id !== connectionId) })
   }
 
   const generateConnectionPath = (
@@ -435,7 +263,9 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
   const handleAISuggestion = (suggestion: string) => {
     if (suggestion === "add_interview_confirmation_screen") {
       // Check if the confirmation screen already exists
-      const existingConfirmationScreen = currentPlan.screens.find((screen) => screen.title === "Interview Confirmation")
+      const existingConfirmationScreen = prototypePlan.screens.find(
+        (screen) => screen.title === "Interview Confirmation",
+      )
 
       if (!existingConfirmationScreen) {
         // Create the new Interview Confirmation screen
@@ -483,7 +313,7 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
         }
 
         // Find the "Confirm Interview" element in Interview Scheduler to connect from
-        const interviewSchedulerScreen = currentPlan.screens.find((screen) => screen.title === "Interview Scheduler")
+        const interviewSchedulerScreen = prototypePlan.screens.find((screen) => screen.title === "Interview Scheduler")
         const confirmInterviewElement = interviewSchedulerScreen?.elements.find(
           (element) => element.label === "Confirm Interview",
         )
@@ -497,7 +327,7 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
 
         // Find the "Back to Dashboard" element in new screen to connect back
         const backToDashboardElement = newScreen.elements.find((element) => element.label === "Back to Dashboard")
-        const candidateDashboardScreen = currentPlan.screens.find((screen) => screen.title === "Candidate Dashboard")
+        const candidateDashboardScreen = prototypePlan.screens.find((screen) => screen.title === "Candidate Dashboard")
 
         const backConnection: PrototypeConnection = {
           id: `conn-${Date.now()}-back`,
@@ -507,67 +337,9 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
 
         // Update the prototype plan
         onUpdate({
-          ...currentPlan,
-          screens: [...currentPlan.screens, newScreen],
-          connections: [...currentPlan.connections, newConnection, backConnection],
-        })
-      }
-    }
-
-    if (suggestion === "add_evaluator_dashboard") {
-      // Check if the evaluator dashboard already exists
-      const existingDashboard = currentPlan.screens.find((screen) => screen.title === "Evaluator Dashboard")
-
-      if (!existingDashboard) {
-        // Create the new Evaluator Dashboard screen
-        const newScreen: PrototypeScreen = {
-          id: "screen-evaluator-dashboard",
-          title: "Evaluator Dashboard",
-          position: { x: 0, y: 0 }, // Will be calculated by grid layout
-          elements: [
-            {
-              id: "element-filter-by-score",
-              type: "input",
-              label: "Filter by Score",
-              screenId: "screen-evaluator-dashboard",
-              position: { x: 0, y: 0 },
-            },
-            {
-              id: "element-view-flagged-candidates",
-              type: "info",
-              label: "View Flagged Candidates",
-              screenId: "screen-evaluator-dashboard",
-              position: { x: 0, y: 0 },
-            },
-            {
-              id: "element-add-final-comments",
-              type: "input",
-              label: "Add Final Comments",
-              screenId: "screen-evaluator-dashboard",
-              position: { x: 0, y: 0 },
-            },
-            {
-              id: "element-mark-as-shortlisted",
-              type: "action",
-              label: "Mark as Shortlisted",
-              screenId: "screen-evaluator-dashboard",
-              position: { x: 0, y: 0 },
-            },
-          ],
-        }
-
-        // Create connection from "Open Evaluator Tools" to new dashboard
-        const newConnection: PrototypeConnection = {
-          id: "conn-review-to-dashboard",
-          fromElementId: "element-open-evaluator-tools",
-          toScreenId: "screen-evaluator-dashboard",
-        }
-
-        // Update the prototype plan
-        onUpdate({
-          ...currentPlan,
-          screens: [...currentPlan.screens, newScreen],
-          connections: [...currentPlan.connections, newConnection],
+          ...prototypePlan,
+          screens: [...prototypePlan.screens, newScreen],
+          connections: [...prototypePlan.connections, newConnection, backConnection],
         })
       }
     }
@@ -580,12 +352,16 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
   const canConnectToScreen = (screenId: string) => {
     if (!connectingFromElement) return false
     // Don't allow connecting to the same screen as the source element
-    const sourceScreen = currentPlan.screens.find((s) => s.elements.some((e) => e.id === connectingFromElement))
+    const sourceScreen = prototypePlan.screens.find((s) => s.elements.some((e) => e.id === connectingFromElement))
     return sourceScreen?.id !== screenId
   }
 
   return (
-    <div ref={breadboardContainerRef} className="bg-white shadow-sm rounded-lg p-6 md:p-8 relative">
+    <div
+      ref={breadboardContainerRef}
+      className="bg-white shadow-sm rounded-lg p-6 md:p-8 relative"
+      style={{ minHeight: `${Math.max(canvasDimensions.height + 40, 400)}px` }}
+    >
       {" "}
       {/* Added relative positioning for AI Assistant */}
       <div className="flex items-center justify-between mb-6">
@@ -610,7 +386,7 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
       )}
       <div
         className={`relative bg-gray-50 rounded-lg border border-gray-200 overflow-auto transition-opacity duration-300 ${isChatAssistantOpen ? "opacity-50 pointer-events-none" : "opacity-100"}`}
-        style={{ height: `${canvasDimensions.height + 12}px` }}
+        style={{ minHeight: `${Math.max(canvasDimensions.height + 12, 320)}px` }}
       >
         <div
           ref={canvasRef}
@@ -629,7 +405,7 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
             viewBox={`0 0 ${canvasDimensions.width} ${canvasDimensions.height}`}
             style={{ zIndex: 10 }}
           >
-            {currentPlan.connections.map((connection) => {
+            {prototypePlan.connections.map((connection) => {
               const path = generateConnectionPath(connection, screensToRender)
               if (!path) return null
               const midpoint = getConnectionMidpoint(path)
