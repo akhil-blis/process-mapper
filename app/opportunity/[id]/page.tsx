@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
-import type { AIOpportunity, ProcessInsight } from "@/types/prototype"
 import {
   ArrowLeft,
   Download,
@@ -12,62 +11,137 @@ import {
   AlertTriangle,
   Zap,
   SquareGanttChartIcon as SquareChartGantt,
+  CodeIcon,
 } from "lucide-react"
 import { Logo } from "@/components/logo"
 import { AILoading } from "@/components/ai-loading"
+import { OpportunityOverrideModal } from "@/components/opportunity/opportunity-override-modal"
 
-// Sample opportunities data (same as in process-analysis page)
-const opportunities: Record<
-  string,
-  AIOpportunity & {
-    detailedDescription: string
-    keyInsights: ProcessInsight[]
-    proposedSolution: string
-    nextSteps: string[]
+type OpportunityData = {
+  title: string
+  summary: string
+  process_step: {
+    label: string
   }
-> = {
-  "auto-score-candidates": {
-    id: "auto-score-candidates",
-    title: "Auto-score candidates",
-    description:
-      "Use AI to automatically score candidates based on resume content and role criteria, reducing manual screening time by 70%",
-    stepId: "4",
-    stepTitle: "Screen Candidates",
-    category: "analysis",
-    impact: "high",
-    detailedDescription:
-      "The candidate screening process currently takes 4 hours per batch and represents the biggest bottleneck in your hiring workflow. By implementing AI-powered candidate scoring, you can automatically evaluate resumes against job requirements, skills matching, and experience relevance.",
-    keyInsights: [
+  roles_involved: string[]
+  impact_estimate: {
+    description: string
+  }
+  why_this_matters: Array<{
+    title: string
+    description: string
+    type: string
+  }>
+  how_it_works: {
+    steps: Array<{
+      label: string
+      description: string
+    }>
+  }
+  mvp_plan: {
+    phases: Array<{
+      title: string
+      duration: string
+      steps: string[]
+    }>
+  }
+}
+
+// Default opportunity data using your JSON structure
+const defaultOpportunityData: OpportunityData = {
+  title: "Auto-score candidates",
+  summary:
+    "The candidate screening process currently takes 4 hours per batch and represents the biggest bottleneck in your hiring workflow. By implementing AI-powered candidate scoring, you can automatically evaluate resumes against job requirements, skills matching, and experience relevance.",
+  process_step: {
+    label: "Screen Candidates",
+  },
+  roles_involved: ["HR Specialist", "Hiring Manager"],
+  impact_estimate: {
+    description: "Saves ~3 hours per batch, +70% efficiency",
+  },
+  why_this_matters: [
+    {
+      title: "Major Time Bottleneck",
+      description: "Manual screening takes 4 hours per batch and is tagged as a friction point in your current process",
+      type: "bottleneck",
+    },
+    {
+      title: "Inconsistent Evaluation",
+      description: "Different HR specialists may evaluate candidates differently, leading to missed opportunities",
+      type: "quality",
+    },
+    {
+      title: "High Volume Processing",
+      description: "Large number of applications makes manual review time-consuming and error-prone",
+      type: "scale",
+    },
+  ],
+  how_it_works: {
+    steps: [
       {
-        id: "1",
-        title: "Major Time Bottleneck",
+        label: "Resume Analysis",
         description:
-          "Manual screening takes 4 hours per batch and is tagged as a friction point in your current process",
-        type: "delay",
-        severity: "high",
+          "AI scans uploaded resumes to extract key information including skills, experience levels, education, certifications, and previous job titles.",
       },
       {
-        id: "2",
-        title: "Inconsistent Evaluation",
-        description: "Different HR specialists may evaluate candidates differently, leading to missed opportunities",
-        type: "friction",
-        severity: "medium",
+        label: "Job Requirements Matching",
+        description:
+          "System compares candidate profiles against predefined job criteria, required skills, and experience thresholds.",
       },
       {
-        id: "3",
-        title: "High Volume Processing",
-        description: "Large number of applications makes manual review time-consuming and error-prone",
-        type: "opportunity",
-        severity: "high",
+        label: "Confidence Scoring",
+        description:
+          "Generates numerical scores (0–100) for each candidate with confidence indicators showing how certain the AI is about the match.",
+      },
+      {
+        label: "Qualification Highlighting",
+        description:
+          "Automatically identifies and highlights the most relevant qualifications, red flags, and areas requiring human review.",
+      },
+      {
+        label: "Prioritized Queue",
+        description:
+          "Ranks candidates by score and presents them in order of best fit, allowing HR specialists to focus on top prospects first.",
+      },
+      {
+        label: "Continuous Learning",
+        description:
+          "System learns from HR specialist feedback and hiring decisions to improve future scoring accuracy.",
       },
     ],
-    proposedSolution:
-      "Implement an AI scoring system that analyzes resumes for relevant skills, experience, education, and cultural fit indicators. The system would provide confidence scores and highlight key qualifications, allowing HR specialists to focus on the most promising candidates first.",
-    nextSteps: [
-      "Define scoring criteria and weights for different job roles",
-      "Integrate with existing ATS system",
-      "Train AI model on historical successful hires",
-      "Implement feedback loop for continuous improvement",
+  },
+  mvp_plan: {
+    phases: [
+      {
+        title: "Concept Validation",
+        duration: "2–3 days",
+        steps: [
+          "Define scoring criteria and weights for different job roles",
+          "Analyze historical hiring data to establish success patterns",
+          "Validate concept with key stakeholders",
+          "Document requirements and success metrics",
+        ],
+      },
+      {
+        title: "Prototype Development",
+        duration: "3–5 days",
+        steps: [
+          "Build basic AI scoring engine with rule-based logic",
+          "Create user interface for HR specialists to review scores",
+          "Test with sample resumes and gather initial feedback",
+          "Refine scoring algorithm based on feedback",
+        ],
+      },
+      {
+        title: "MVP Integration",
+        duration: "1–2 weeks",
+        steps: [
+          "Integrate with existing ATS system for seamless workflow",
+          "Implement machine learning model trained on historical data",
+          "Deploy feedback loop for continuous improvement",
+          "Launch pilot program with limited job postings",
+        ],
+      },
     ],
   },
 }
@@ -84,35 +158,69 @@ export default function OpportunityReportPage() {
     return true
   })
 
-  const opportunity = opportunities[opportunityId]
+  const [opportunityData, setOpportunityData] = useState<OpportunityData>(defaultOpportunityData)
+  const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false)
 
   useEffect(() => {
-    if (!opportunity) {
-      router.push("/opportunity/auto-score-candidates")
+    // Load any saved override data from localStorage
+    if (typeof window !== "undefined") {
+      const savedData = localStorage.getItem(`opportunity-${opportunityId}-data`)
+      if (savedData) {
+        try {
+          setOpportunityData(JSON.parse(savedData))
+        } catch (error) {
+          console.error("Failed to parse saved opportunity data:", error)
+        }
+      }
     }
-  }, [opportunity, router])
+  }, [opportunityId])
 
-  if (!opportunity) {
-    return null
+  const handleOverrideSubmit = (data: OpportunityData) => {
+    setOpportunityData(data)
+    // Save to localStorage
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`opportunity-${opportunityId}-data`, JSON.stringify(data))
+    }
   }
 
-  const severityColors = {
-    high: "bg-red-50 border-red-200 text-red-700",
-    medium: "bg-yellow-50 border-yellow-200 text-yellow-700",
-    low: "bg-blue-50 border-blue-200 text-blue-700",
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "bottleneck":
+        return <Clock className="h-5 w-5" />
+      case "quality":
+        return <AlertTriangle className="h-5 w-5" />
+      case "scale":
+        return <Zap className="h-5 w-5" />
+      default:
+        return <Users className="h-5 w-5" />
+    }
   }
 
-  const typeIcons = {
-    delay: <Clock className="h-4 w-4" />,
-    overlap: <Users className="h-4 w-4" />,
-    friction: <AlertTriangle className="h-4 w-4" />,
-    opportunity: <Zap className="h-4 w-4" />,
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case "bottleneck":
+        return "bg-red-50 border-red-200 text-red-700"
+      case "quality":
+        return "bg-yellow-50 border-yellow-200 text-yellow-700"
+      case "scale":
+        return "bg-blue-50 border-blue-200 text-blue-700"
+      default:
+        return "bg-gray-50 border-gray-200 text-gray-700"
+    }
   }
 
-  const impactColors = {
-    high: "text-red-600",
-    medium: "text-yellow-600",
-    low: "text-blue-600",
+  const getPhaseColor = (index: number) => {
+    const colors = ["border-blue-500", "border-violet-500", "border-green-500"]
+    return colors[index] || "border-gray-500"
+  }
+
+  const getPhaseBackgroundColor = (index: number) => {
+    const colors = [
+      { bg: "bg-blue-100", text: "text-blue-700", badge: "bg-blue-100 text-blue-800" },
+      { bg: "bg-violet-100", text: "text-violet-700", badge: "bg-violet-100 text-violet-800" },
+      { bg: "bg-green-100", text: "text-green-700", badge: "bg-green-100 text-green-800" },
+    ]
+    return colors[index] || { bg: "bg-gray-100", text: "text-gray-700", badge: "bg-gray-100 text-gray-800" }
   }
 
   return (
@@ -149,12 +257,19 @@ export default function OpportunityReportPage() {
                 <div className="hidden md:block">
                   <h2 className="text-lg font-medium text-gray-700">Opportunity Report</h2>
                 </div>
-                <div className="flex items-center">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setIsOverrideModalOpen(true)}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 transition-colors"
+                  >
+                    <CodeIcon className="h-4 w-4" />
+                    Override Data
+                  </button>
                   <div className="flex items-center gap-2 text-sm text-green-600">
                     <FileText className="h-4 w-4" />
                     <span>Report Ready</span>
                   </div>
-                  <div className="ml-4 w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-semibold text-xs">
+                  <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-semibold text-xs">
                     JD
                   </div>
                 </div>
@@ -167,70 +282,85 @@ export default function OpportunityReportPage() {
               {/* 1. Opportunity Summary Header */}
               <section className="bg-white shadow-sm rounded-lg border border-gray-200 p-6 md:p-8">
                 <div className="mb-6">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-4">{opportunity.title}</h1>
-                  <p className="text-lg text-gray-700 leading-relaxed mb-6">{opportunity.detailedDescription}</p>
+                  <h1 className="text-3xl font-bold text-gray-900 mb-4">{opportunityData.title}</h1>
+                  <p className="text-lg text-gray-700 leading-relaxed mb-6">{opportunityData.summary}</p>
 
                   {/* Info Cards Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                            />
-                          </svg>
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 mt-0.5">
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <svg
+                              className="w-4 h-4 text-blue-600"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                              />
+                            </svg>
+                          </div>
                         </div>
-                        <span className="text-sm font-medium text-blue-700">Process Step</span>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-blue-900 mb-2">Process Step</h4>
+                          <p className="text-sm text-blue-700 opacity-90">{opportunityData.process_step.label}</p>
+                        </div>
                       </div>
-                      <span className="text-sm text-blue-900 font-semibold">{opportunity.stepTitle}</span>
                     </div>
 
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                          <Users className="w-4 h-4 text-green-600" />
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 mt-0.5">
+                          <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                            <Users className="w-4 h-4 text-green-600" />
+                          </div>
                         </div>
-                        <span className="text-sm font-medium text-green-700">Roles Involved</span>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-green-900 mb-2">Roles Involved</h4>
+                          <p className="text-sm text-green-700 opacity-90">
+                            {opportunityData.roles_involved.join(", ")}
+                          </p>
+                        </div>
                       </div>
-                      <span className="text-sm text-green-900 font-semibold">HR Specialist, Hiring Manager</span>
                     </div>
 
                     <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                          <svg
-                            className="w-4 h-4 text-purple-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                            />
-                          </svg>
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 mt-0.5">
+                          <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <svg
+                              className="w-4 h-4 text-purple-600"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                              />
+                            </svg>
+                          </div>
                         </div>
-                        <span className="text-sm font-medium text-purple-700">Impact Estimate</span>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-purple-900 mb-2">Impact Estimate</h4>
+                          <p className="text-sm text-purple-700 opacity-90">
+                            {opportunityData.impact_estimate.description}
+                          </p>
+                        </div>
                       </div>
-                      <span className="text-sm text-purple-900 font-semibold">
-                        {opportunity.impact === "high"
-                          ? "Saves ~3 hours per batch, +70% efficiency"
-                          : opportunity.impact === "medium"
-                            ? "Saves ~1 hour per batch, +40% consistency"
-                            : "Saves ~30 minutes per batch, +20% efficiency"}
-                      </span>
                     </div>
                   </div>
                 </div>
               </section>
 
-              {/* 2. Key Drivers / Pain Points */}
+              {/* 2. Why This Matters */}
               <section className="bg-white shadow-sm rounded-lg p-6 md:p-8">
                 <div className="mb-6">
                   <h2 className="text-2xl font-semibold text-gray-900 mb-2">Why This Matters</h2>
@@ -240,15 +370,10 @@ export default function OpportunityReportPage() {
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-4">
-                  {opportunity.keyInsights.map((insight) => (
-                    <div key={insight.id} className={`rounded-lg border p-4 ${severityColors[insight.severity]}`}>
+                  {opportunityData.why_this_matters.map((insight, index) => (
+                    <div key={index} className={`rounded-lg border p-4 ${getTypeColor(insight.type)}`}>
                       <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 mt-0.5">
-                          {insight.type === "delay" && <Clock className="h-5 w-5" />}
-                          {insight.type === "friction" && <AlertTriangle className="h-5 w-5" />}
-                          {insight.type === "opportunity" && <Zap className="h-5 w-5" />}
-                          {insight.type === "overlap" && <Users className="h-5 w-5" />}
-                        </div>
+                        <div className="flex-shrink-0 mt-0.5">{getTypeIcon(insight.type)}</div>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-semibold mb-2">{insight.title}</h4>
                           <p className="text-sm opacity-90">{insight.description}</p>
@@ -259,7 +384,7 @@ export default function OpportunityReportPage() {
                 </div>
               </section>
 
-              {/* 3. Solution Overview */}
+              {/* 3. How It Works */}
               <section className="bg-white shadow-sm rounded-lg p-6 md:p-8">
                 <div className="mb-6">
                   <h2 className="text-2xl font-semibold text-gray-900 mb-2">How It Works</h2>
@@ -267,51 +392,26 @@ export default function OpportunityReportPage() {
                 </div>
 
                 <div className="space-y-6">
-                  <div className="border-l-4 border-violet-500 pl-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Resume Analysis</h3>
-                    <p className="text-gray-600 leading-relaxed">
-                      AI scans uploaded resumes to extract key information including skills, experience levels,
-                      education, certifications, and previous job titles.
-                    </p>
-                  </div>
-                  <div className="border-l-4 border-blue-500 pl-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Job Requirements Matching</h3>
-                    <p className="text-gray-600 leading-relaxed">
-                      System compares candidate profiles against predefined job criteria, required skills, and
-                      experience thresholds.
-                    </p>
-                  </div>
-                  <div className="border-l-4 border-green-500 pl-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Confidence Scoring</h3>
-                    <p className="text-gray-600 leading-relaxed">
-                      Generates numerical scores (0-100) for each candidate with confidence indicators showing how
-                      certain the AI is about the match.
-                    </p>
-                  </div>
-                  <div className="border-l-4 border-yellow-500 pl-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Qualification Highlighting</h3>
-                    <p className="text-gray-600 leading-relaxed">
-                      Automatically identifies and highlights the most relevant qualifications, red flags, and areas
-                      requiring human review.
-                    </p>
-                  </div>
-                  <div className="border-l-4 border-purple-500 pl-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Prioritized Queue</h3>
-                    <p className="text-gray-600 leading-relaxed">
-                      Ranks candidates by score and presents them in order of best fit, allowing HR specialists to focus
-                      on top prospects first.
-                    </p>
-                  </div>
-                  <div className="border-l-4 border-orange-500 pl-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Continuous Learning</h3>
-                    <p className="text-gray-600 leading-relaxed">
-                      System learns from HR specialist feedback and hiring decisions to improve future scoring accuracy.
-                    </p>
-                  </div>
+                  {opportunityData.how_it_works.steps.map((step, index) => {
+                    const colors = [
+                      "border-violet-500",
+                      "border-blue-500",
+                      "border-green-500",
+                      "border-yellow-500",
+                      "border-purple-500",
+                      "border-orange-500",
+                    ]
+                    return (
+                      <div key={index} className={`border-l-4 ${colors[index] || "border-gray-500"} pl-6`}>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">{step.label}</h3>
+                        <p className="text-gray-600 leading-relaxed">{step.description}</p>
+                      </div>
+                    )
+                  })}
                 </div>
               </section>
 
-              {/* 4. Implementation Path */}
+              {/* 4. MVP Plan */}
               <section className="bg-white shadow-sm rounded-lg p-6 md:p-8">
                 <div className="mb-6">
                   <h2 className="text-2xl font-semibold text-gray-900 mb-2">From Concept to MVP</h2>
@@ -321,72 +421,31 @@ export default function OpportunityReportPage() {
                 </div>
 
                 <div className="space-y-6">
-                  {/* Phase 1: Concept Validation */}
-                  <div className="border-l-4 border-blue-500 pl-6">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-sm font-bold">
-                        1
+                  {opportunityData.mvp_plan.phases.map((phase, index) => {
+                    const phaseColors = getPhaseBackgroundColor(index)
+                    return (
+                      <div key={index} className={`border-l-4 ${getPhaseColor(index)} pl-6`}>
+                        <div className="flex items-center gap-3 mb-3">
+                          <div
+                            className={`w-8 h-8 ${phaseColors.bg} ${phaseColors.text} rounded-full flex items-center justify-center text-sm font-bold`}
+                          >
+                            {index + 1}
+                          </div>
+                          <h3 className="text-lg font-semibold text-gray-900">{phase.title}</h3>
+                          <span className={`text-xs font-medium ${phaseColors.badge} px-2 py-1 rounded-full`}>
+                            {phase.duration}
+                          </span>
+                        </div>
+                        <div className="space-y-2 ml-11">
+                          {phase.steps.map((step, stepIndex) => (
+                            <p key={stepIndex} className="text-gray-700 font-normal">
+                              {step}
+                            </p>
+                          ))}
+                        </div>
                       </div>
-                      <h3 className="text-lg font-semibold text-gray-900">Concept Validation</h3>
-                      <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                        2-3 days
-                      </span>
-                    </div>
-                    <div className="space-y-2 ml-11">
-                      <p className="text-gray-700 font-normal">
-                        Define scoring criteria and weights for different job roles
-                      </p>
-                      <p className="text-gray-700 font-normal">
-                        Analyze historical hiring data to establish success patterns
-                      </p>
-                      <p className="text-gray-700 font-normal">Validate concept with key stakeholders</p>
-                      <p className="text-gray-700 font-normal">Document requirements and success metrics</p>
-                    </div>
-                  </div>
-
-                  {/* Phase 2: Prototype Development */}
-                  <div className="border-l-4 border-violet-500 pl-6">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 bg-violet-100 text-violet-700 rounded-full flex items-center justify-center text-sm font-bold">
-                        2
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900">Prototype Development</h3>
-                      <span className="text-xs font-medium bg-violet-100 text-violet-800 px-2 py-1 rounded-full">
-                        3-5 days
-                      </span>
-                    </div>
-                    <div className="space-y-2 ml-11">
-                      <p className="text-gray-700 font-normal">Build basic AI scoring engine with rule-based logic</p>
-                      <p className="text-gray-700 font-normal">
-                        Create user interface for HR specialists to review scores
-                      </p>
-                      <p className="text-gray-700 font-normal">Test with sample resumes and gather initial feedback</p>
-                      <p className="text-gray-700 font-normal">Refine scoring algorithm based on feedback</p>
-                    </div>
-                  </div>
-
-                  {/* Phase 3: MVP Integration */}
-                  <div className="border-l-4 border-green-500 pl-6">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-sm font-bold">
-                        3
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900">MVP Integration</h3>
-                      <span className="text-xs font-medium bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                        1-2 weeks
-                      </span>
-                    </div>
-                    <div className="space-y-2 ml-11">
-                      <p className="text-gray-700 font-normal">
-                        Integrate with existing ATS system for seamless workflow
-                      </p>
-                      <p className="text-gray-700 font-normal">
-                        Implement machine learning model trained on historical data
-                      </p>
-                      <p className="text-gray-700 font-normal">Deploy feedback loop for continuous improvement</p>
-                      <p className="text-gray-700 font-normal">Launch pilot program with limited job postings</p>
-                    </div>
-                  </div>
+                    )
+                  })}
                 </div>
               </section>
             </div>
@@ -424,6 +483,14 @@ export default function OpportunityReportPage() {
               </div>
             </div>
           </footer>
+
+          {/* Override Modal */}
+          <OpportunityOverrideModal
+            isOpen={isOverrideModalOpen}
+            onClose={() => setIsOverrideModalOpen(false)}
+            onSubmit={handleOverrideSubmit}
+            currentData={opportunityData}
+          />
         </>
       )}
     </div>

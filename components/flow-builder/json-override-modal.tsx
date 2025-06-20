@@ -79,30 +79,31 @@ export function JSONOverrideModal({ isOpen, onClose, onSubmit }: JSONOverrideMod
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[60vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center gap-3">
             <Code className="h-5 w-5 text-orange-600" />
-            <h2 className="text-lg font-semibold">Override Process Flow</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Override Process Flow</h2>
           </div>
-          <button onClick={handleClose} className="p-1 hover:bg-gray-100 rounded-md transition-colors">
-            <X className="h-5 w-5" />
+          <button onClick={handleClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <X className="h-5 w-5 text-gray-500" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 p-6 overflow-hidden flex flex-col">
-          <div className="mb-4">
-            <label htmlFor="json-input" className="block text-sm font-medium text-gray-700 mb-2">
-              Paste your process flow JSON:
-            </label>
-            <textarea
-              id="json-input"
-              value={jsonInput}
-              onChange={(e) => setJsonInput(e.target.value)}
-              placeholder={`{
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
+            <div className="space-y-3">
+              <label htmlFor="json-input" className="block text-sm font-medium text-gray-900">
+                Paste your process flow JSON:
+              </label>
+              <textarea
+                id="json-input"
+                value={jsonInput}
+                onChange={(e) => setJsonInput(e.target.value)}
+                placeholder={`{
   "title": "My Process",
   "nodes": [
     {
@@ -115,25 +116,32 @@ export function JSONOverrideModal({ isOpen, onClose, onSubmit }: JSONOverrideMod
   ],
   "edges": []
 }`}
-              className="w-full h-32 p-3 border border-gray-300 rounded-md font-mono text-sm resize-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-            />
-          </div>
-
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-red-700">{error}</div>
+                className="w-full h-80 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 font-mono text-sm resize-none"
+              />
             </div>
-          )}
 
-          <div className="text-xs text-gray-500 mb-4">
-            <strong>Required format:</strong> JSON object with 'nodes' and 'edges' arrays. Each node needs 'id', 'type',
-            'title', and 'position' with 'row' and 'column' numbers.
+            {error && (
+              <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-red-800">Validation Error</p>
+                  <p className="text-sm text-red-700 mt-1">{error}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Required Format</h3>
+              <p className="text-xs text-gray-600">
+                JSON object with 'nodes' and 'edges' arrays. Each node needs 'id', 'type', 'title', and 'position' with
+                'row' and 'column' numbers.
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t bg-gray-50">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
           <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
             Cancel
           </Button>

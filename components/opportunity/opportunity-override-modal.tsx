@@ -3,53 +3,44 @@
 import { useState } from "react"
 import { X, AlertCircle } from "lucide-react"
 
-type ProcessAnalysisData = {
-  processAnalysis: {
-    meta: {
-      processTitle: string
-      source: string
-      analysisDate: string
-    }
-    summary: {
-      metrics: {
-        stepCount: number
-        roleCount: number
-        frictionCount: number
-        handoffCount: number
-        automatedCount: number
-        estimatedDurationMinutes: number
-      }
-      roles: string[]
-      tools: string[]
-    }
-    insights: Array<{
-      id: string
-      title: string
+type OpportunityData = {
+  title: string
+  summary: string
+  process_step: {
+    label: string
+  }
+  roles_involved: string[]
+  impact_estimate: {
+    description: string
+  }
+  why_this_matters: Array<{
+    title: string
+    description: string
+    type: string
+  }>
+  how_it_works: {
+    steps: Array<{
+      label: string
       description: string
-      type: "delay" | "friction" | "overlap"
-      severity: "high" | "medium" | "low"
-      icon: string
     }>
-    aiOpportunities: Array<{
-      id: string
+  }
+  mvp_plan: {
+    phases: Array<{
       title: string
-      description: string
-      targetStepId: string
-      targetStepTitle: string
-      category: "classification" | "decision" | "summarization" | "analysis" | "communication"
-      impact: "high" | "medium" | "low"
-      icon: string
+      duration: string
+      steps: string[]
     }>
   }
 }
 
-type ProcessAnalysisOverrideModalProps = {
+type OpportunityOverrideModalProps = {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: ProcessAnalysisData) => void
+  onSubmit: (data: OpportunityData) => void
+  currentData: OpportunityData
 }
 
-export function ProcessAnalysisOverrideModal({ isOpen, onClose, onSubmit }: ProcessAnalysisOverrideModalProps) {
+export function OpportunityOverrideModal({ isOpen, onClose, onSubmit, currentData }: OpportunityOverrideModalProps) {
   const [jsonInput, setJsonInput] = useState("")
   const [error, setError] = useState("")
 
@@ -58,17 +49,12 @@ export function ProcessAnalysisOverrideModal({ isOpen, onClose, onSubmit }: Proc
       const parsed = JSON.parse(jsonInput)
 
       // Basic validation
-      if (!parsed.processAnalysis) {
-        throw new Error("Missing 'processAnalysis' root object")
+      if (!parsed.title || !parsed.summary || !parsed.process_step || !parsed.roles_involved) {
+        throw new Error("Missing required fields: title, summary, process_step, or roles_involved")
       }
 
-      if (
-        !parsed.processAnalysis.meta ||
-        !parsed.processAnalysis.summary ||
-        !parsed.processAnalysis.insights ||
-        !parsed.processAnalysis.aiOpportunities
-      ) {
-        throw new Error("Missing required sections: meta, summary, insights, or aiOpportunities")
+      if (!parsed.why_this_matters || !parsed.how_it_works || !parsed.mvp_plan) {
+        throw new Error("Missing required sections: why_this_matters, how_it_works, or mvp_plan")
       }
 
       onSubmit(parsed)
@@ -80,49 +66,7 @@ export function ProcessAnalysisOverrideModal({ isOpen, onClose, onSubmit }: Proc
     }
   }
 
-  const sampleJson = `{
-  "processAnalysis": {
-    "meta": {
-      "processTitle": "Your Process Name",
-      "source": "uploadedFlow",
-      "analysisDate": "2025-06-19"
-    },
-    "summary": {
-      "metrics": {
-        "stepCount": 5,
-        "roleCount": 2,
-        "frictionCount": 1,
-        "handoffCount": 1,
-        "automatedCount": 1,
-        "estimatedDurationMinutes": 120
-      },
-      "roles": ["Role 1", "Role 2"],
-      "tools": ["Tool 1", "Tool 2"]
-    },
-    "insights": [
-      {
-        "id": "insight-1",
-        "title": "Sample Insight",
-        "description": "Description of the insight",
-        "type": "delay",
-        "severity": "high",
-        "icon": "alert-triangle"
-      }
-    ],
-    "aiOpportunities": [
-      {
-        "id": "opp-1",
-        "title": "Sample Opportunity",
-        "description": "Description of the opportunity",
-        "targetStepId": "1",
-        "targetStepTitle": "Step Name",
-        "category": "classification",
-        "impact": "high",
-        "icon": "layers"
-      }
-    ]
-  }
-}`
+  const sampleJson = JSON.stringify(currentData, null, 2)
 
   if (!isOpen) return null
 
@@ -131,7 +75,7 @@ export function ProcessAnalysisOverrideModal({ isOpen, onClose, onSubmit }: Proc
       <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
-          <h2 className="text-xl font-semibold text-gray-900">Override Process Analysis Data</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Override Opportunity Data</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <X className="h-5 w-5 text-gray-500" />
           </button>
@@ -142,7 +86,7 @@ export function ProcessAnalysisOverrideModal({ isOpen, onClose, onSubmit }: Proc
           <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
             <div className="space-y-3">
               <label htmlFor="json-input" className="block text-sm font-medium text-gray-900">
-                Process Analysis JSON
+                Opportunity Data JSON
               </label>
               <textarea
                 id="json-input"
@@ -171,22 +115,38 @@ export function ProcessAnalysisOverrideModal({ isOpen, onClose, onSubmit }: Proc
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-gray-600">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">processAnalysis.meta</code>
-                    <span>Process metadata</span>
+                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">title</code>
+                    <span>Opportunity title</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">processAnalysis.summary</code>
-                    <span>Metrics, roles, and tools</span>
+                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">summary</code>
+                    <span>Detailed description</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">process_step</code>
+                    <span>Process step info</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">roles_involved</code>
+                    <span>Array of roles</span>
                   </div>
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">processAnalysis.insights</code>
-                    <span>AI-generated insights array</span>
+                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">impact_estimate</code>
+                    <span>Impact description</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">processAnalysis.aiOpportunities</code>
-                    <span>AI opportunities array</span>
+                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">why_this_matters</code>
+                    <span>Array of insights</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">how_it_works</code>
+                    <span>Solution steps</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">mvp_plan</code>
+                    <span>Implementation phases</span>
                   </div>
                 </div>
               </div>
