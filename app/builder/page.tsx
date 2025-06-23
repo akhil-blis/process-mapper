@@ -258,6 +258,13 @@ export default function FlowBuilder() {
     }))
   }
 
+  const handleNodeAdd = (node: FlowNode) => {
+    setFlowData((prev) => ({
+      ...prev,
+      nodes: [...prev.nodes, node],
+    }))
+  }
+
   const handleEdgeAdd = (edge: FlowEdge) => {
     setFlowData((prev) => ({
       ...prev,
@@ -281,6 +288,12 @@ export default function FlowBuilder() {
 
   const handleFlowOverride = (newFlowData: FlowData) => {
     setFlowData(newFlowData)
+  }
+
+  const handleAddNodeClick = () => {
+    if (canvasRef.current) {
+      canvasRef.current.enterPlacementMode()
+    }
   }
 
   const handleExport = async () => {
@@ -356,12 +369,17 @@ export default function FlowBuilder() {
               nodes={flowData.nodes}
               edges={flowData.edges}
               onNodeUpdate={handleNodeUpdate}
+              onNodeAdd={handleNodeAdd}
               onEdgeAdd={handleEdgeAdd}
               onEdgeDelete={handleEdgeDelete}
               onEdgeUpdate={handleEdgeUpdate}
             />
           </main>
-          <ToolPalette onOverrideClick={() => setIsOverrideModalOpen(true)} onExportClick={handleExport} />
+          <ToolPalette
+            onOverrideClick={() => setIsOverrideModalOpen(true)}
+            onExportClick={handleExport}
+            onAddNodeClick={handleAddNodeClick}
+          />
           <FooterSummary flowData={flowData} />
         </>
       )}

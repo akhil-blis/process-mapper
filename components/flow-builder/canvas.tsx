@@ -5,11 +5,13 @@ import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHand
 import type { FlowNode, FlowEdge } from "@/types/flow"
 import { FlowNodeComponent } from "./flow-node"
 import { FloatingPanel } from "./floating-panel"
+import { nanoid } from "nanoid"
 
 type CanvasProps = {
   nodes: FlowNode[]
   edges: FlowEdge[]
   onNodeUpdate: (nodeId: string, updates: Partial<FlowNode>) => void
+  onNodeAdd?: (node: FlowNode) => void
   onEdgeAdd?: (edge: FlowEdge) => void
   onEdgeDelete?: (edgeId: string) => void
   onEdgeUpdate?: (edgeId: string, updates: Partial<FlowEdge>) => void
@@ -17,6 +19,7 @@ type CanvasProps = {
 
 export type CanvasRef = {
   exportAsImage: () => Promise<string>
+  enterPlacementMode: () => void
 }
 
 // Layout constants - doubled the spacing between nodes
@@ -34,7 +37,7 @@ const CONNECTION_DOT_SIZE = 16
 const CONNECTION_DOT_Y_OFFSET = 20
 
 export const Canvas = forwardRef<CanvasRef, CanvasProps>(
-  ({ nodes, edges, onNodeUpdate, onEdgeAdd, onEdgeDelete, onEdgeUpdate }, ref) => {
+  ({ nodes, edges, onNodeUpdate, onNodeAdd, onEdgeAdd, onEdgeDelete, onEdgeUpdate }, ref) => {
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
     const [connectingFromNode, setConnectingFromNode] = useState<string | null>(null)
     const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 })
@@ -55,6 +58,9 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
     const [showFloatingPanel, setShowFloatingPanel] = useState(false)
     const [hasInitiallyFitted, setHasInitiallyFitted] = useState(false)
 
+    // New state for placement mode
+    const [isPlacingNewNode, setIsPlacingNewNode] = useState(false)
+
     const selectedNode = selectedNodeId ? nodes.find((n) => n.id === selectedNodeId) : null
 
     // Handle node edit button click
@@ -62,8 +68,25 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
       setShowFloatingPanel(true)
     }
 
-    // Expose export function to parent
+    // Enter placement mode
+    const enterPlacementMode = () => {
+      setIsPlacingNewNode(true)
+      setSelectedNodeId(null)
+      setShowFloatingPanel(false)
+      setConnectingFromNode(null)
+      setSelectedConnectionId(null)
+      setEditingConnectionId(null)
+    }
+
+    // Exit placement mode
+    const exitPlacementMode = () => {
+      setIsPlacingNewNode(false)
+      setHighlightedCell(null)
+    }
+
+    // Expose functions to parent
     useImperativeHandle(ref, () => ({
+      enterPlacementMode,
       exportAsImage: async () => {
         // Import html2canvas dynamically
         const html2canvas = (await import("html2canvas")).default
@@ -487,7 +510,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
             const nodeId = nodeElement.getAttribute("data-node-id")
             const node = nodes.find((n) => n.id === nodeId)
 
-            if (node && selectedNodeId === nodeId) {
+            if (node && selectedNodeId === nodeId && !isPlacingNewNode) {
               // Start dragging selected node
               const rect = canvasRef.current?.getBoundingClientRect()
               if (rect) {
@@ -498,24 +521,45 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
                   y: e.clientY - (rect.top + nodePos.y * transform.scale + transform.y),
                 })
               }
-            } else if (node) {
+            } else if (node && !isPlacingNewNode) {
               // Select node (don't open panel yet)
               setSelectedNodeId(nodeId)
               setShowFloatingPanel(false)
             }
           } else {
-            // Click on empty canvas - start panning
-            setIsPanning(true)
-            setLastPanPoint({ x: e.clientX, y: e.clientY })
-            setSelectedNodeId(null)
-            setShowFloatingPanel(false)
-            setConnectingFromNode(null)
-            setSelectedConnectionId(null)
-            setEditingConnectionId(null)
+            // Click on empty canvas
+            if (isPlacingNewNode && highlightedCell && onNodeAdd) {
+              // Place new node
+              const newNode: FlowNode = {
+                id: `node-${nanoid()}`,
+                type: "step",
+                title: "New Step",
+                position: { row: highlightedCell.row, column: highlightedCell.column },
+                role: "",
+                tools: [],
+                duration: { value: 1, unit: "days" },
+                tags: [],
+                attachments: [],
+              }
+
+              onNodeAdd(newNode)
+              setSelectedNodeId(newNode.id)
+              setShowFloatingPanel(true)
+              exitPlacementMode()
+            } else if (!isPlacingNewNode) {
+              // Start panning
+              setIsPanning(true)
+              setLastPanPoint({ x: e.clientX, y: e.clientY })
+              setSelectedNodeId(null)
+              setShowFloatingPanel(false)
+              setConnectingFromNode(null)
+              setSelectedConnectionId(null)
+              setEditingConnectionId(null)
+            }
           }
         }
       },
-      [selectedNodeId, nodes, transform],
+      [selectedNodeId, nodes, transform, isPlacingNewNode, highlightedCell, onNodeAdd],
     )
 
     const handleMouseMove = useCallback(
@@ -531,7 +575,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
           }))
 
           setLastPanPoint({ x: e.clientX, y: e.clientY })
-        } else if (dragStartPos && selectedNodeId && !isDragging) {
+        } else if (dragStartPos && selectedNodeId && !isDragging && !isPlacingNewNode) {
           // Check if we've moved enough to start dragging
           const deltaX = e.clientX - dragStartPos.x
           const deltaY = e.clientY - dragStartPos.y
@@ -541,7 +585,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
             // 5px threshold to start drag
             setIsDragging(true)
           }
-        } else if (isDragging && selectedNodeId) {
+        } else if (isDragging && selectedNodeId && !isPlacingNewNode) {
           // Update highlighted cell during drag
           const rect = canvasRef.current?.getBoundingClientRect()
           if (rect) {
@@ -551,9 +595,29 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
             const gridPos = canvasToGridPosition(canvasX, canvasY)
             setHighlightedCell(gridPos)
           }
+        } else if (isPlacingNewNode) {
+          // Update highlighted cell during placement mode
+          const rect = canvasRef.current?.getBoundingClientRect()
+          if (rect) {
+            const canvasX = (e.clientX - rect.left - transform.x) / transform.scale
+            const canvasY = (e.clientY - rect.top - transform.y) / transform.scale
+
+            const gridPos = canvasToGridPosition(canvasX, canvasY)
+
+            // Only highlight if cell is not occupied
+            const isOccupied = nodes.some(
+              (node) => node.position.row === gridPos.row && node.position.column === gridPos.column,
+            )
+
+            if (!isOccupied && gridPos.row >= 0 && gridPos.column >= 0) {
+              setHighlightedCell(gridPos)
+            } else {
+              setHighlightedCell(null)
+            }
+          }
         }
       },
-      [isPanning, lastPanPoint, dragStartPos, selectedNodeId, isDragging, transform],
+      [isPanning, lastPanPoint, dragStartPos, selectedNodeId, isDragging, transform, isPlacingNewNode, nodes],
     )
 
     const handleMouseUp = useCallback(() => {
@@ -568,8 +632,10 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
       setIsPanning(false)
       setIsDragging(false)
       setDragStartPos(null)
-      setHighlightedCell(null)
-    }, [isDragging, selectedNodeId, highlightedCell, nodes, onNodeUpdate])
+      if (!isPlacingNewNode) {
+        setHighlightedCell(null)
+      }
+    }, [isDragging, selectedNodeId, highlightedCell, nodes, onNodeUpdate, isPlacingNewNode])
 
     // Set up event listeners
     useEffect(() => {
@@ -634,12 +700,14 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
         } else if (selectedConnectionId && (e.key === "Delete" || e.key === "Backspace")) {
           deleteConnection(selectedConnectionId)
           setSelectedConnectionId(null)
+        } else if (isPlacingNewNode && e.key === "Escape") {
+          exitPlacementMode()
         }
       }
 
       document.addEventListener("keydown", handleKeyDown)
       return () => document.removeEventListener("keydown", handleKeyDown)
-    }, [selectedConnectionId, editingConnectionId])
+    }, [selectedConnectionId, editingConnectionId, isPlacingNewNode])
 
     // Focus input when editing starts
     useEffect(() => {
@@ -745,10 +813,17 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
           </div>
         )}
 
+        {/* Placement mode indicator */}
+        {isPlacingNewNode && (
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm">
+            <strong>Placement mode:</strong> Click on an empty grid cell to place a new node
+          </div>
+        )}
+
         {/* Interactive Canvas Layer - Full viewport for mouse events */}
         <div
           ref={canvasRef}
-          className="absolute inset-0 cursor-grab active:cursor-grabbing"
+          className={`absolute inset-0 ${isPlacingNewNode ? "cursor-crosshair" : "cursor-grab active:cursor-grabbing"}`}
           onMouseDown={handleMouseDown}
         >
           {/* Transformed Content Container */}
@@ -937,8 +1012,8 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
               </defs>
             </svg>
 
-            {/* Grid cell highlighting during drag */}
-            {isDragging && highlightedCell && (
+            {/* Grid cell highlighting during drag or placement */}
+            {highlightedCell && (isDragging || isPlacingNewNode) && (
               <div
                 className="absolute border-2 border-dashed border-violet-400 bg-violet-50/30 rounded-lg pointer-events-none"
                 style={{
