@@ -13,21 +13,24 @@ export function ToolPalette({ onOverrideClick, onExportClick, onAddNodeClick }: 
       id: "add-node",
       label: "Add Node",
       icon: <Plus className="h-4 w-4" />,
-      color: "bg-green-50 text-green-600",
+      baseClasses: "bg-green-50 text-green-600",
+      hoverClasses: "hover:bg-green-100 hover:text-green-700",
       onClick: onAddNodeClick,
     },
     {
       id: "export",
       label: "Export",
       icon: <Download className="h-4 w-4" />,
-      color: "bg-indigo-50 text-indigo-600",
+      baseClasses: "bg-indigo-50 text-indigo-600",
+      hoverClasses: "hover:bg-indigo-100 hover:text-indigo-700",
       onClick: onExportClick,
     },
     {
       id: "override",
       label: "Override",
       icon: <Code className="h-4 w-4" />,
-      color: "bg-orange-50 text-orange-600",
+      baseClasses: "bg-orange-50 text-orange-600",
+      hoverClasses: "hover:bg-orange-100 hover:text-orange-700",
       onClick: onOverrideClick,
     },
   ]
@@ -41,8 +44,8 @@ export function ToolPalette({ onOverrideClick, onExportClick, onAddNodeClick }: 
             key={item.id}
             onClick={item.onClick}
             className={`
-              flex items-center gap-2 px-3 py-2 rounded-md transition-all duration-200 hover:bg-gray-100 cursor-pointer
-              ${item.color}
+              flex items-center gap-2 px-3 py-2 rounded-md transition-all duration-200 cursor-pointer
+              ${item.baseClasses} ${item.hoverClasses}
             `}
           >
             {item.icon}
