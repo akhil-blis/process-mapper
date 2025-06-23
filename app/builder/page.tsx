@@ -344,6 +344,14 @@ export default function FlowBuilder() {
     }
   }
 
+  const handleNodeDelete = (nodeId: string) => {
+    setFlowData((prev) => ({
+      ...prev,
+      nodes: prev.nodes.filter((node) => node.id !== nodeId),
+      edges: prev.edges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId),
+    }))
+  }
+
   return (
     <div className="h-screen bg-gray-50">
       {isLoading && (
@@ -370,6 +378,7 @@ export default function FlowBuilder() {
               edges={flowData.edges}
               onNodeUpdate={handleNodeUpdate}
               onNodeAdd={handleNodeAdd}
+              onNodeDelete={handleNodeDelete}
               onEdgeAdd={handleEdgeAdd}
               onEdgeDelete={handleEdgeDelete}
               onEdgeUpdate={handleEdgeUpdate}

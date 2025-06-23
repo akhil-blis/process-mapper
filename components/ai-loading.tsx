@@ -9,7 +9,7 @@ type AILoadingProps = {
   title: string
 }
 
-export function AILoading({ onComplete, duration = 3000, title }: AILoadingProps) {
+export function AILoading({ onComplete, duration = 750, title }: AILoadingProps) {
   const [currentMessage, setCurrentMessage] = useState(0)
   const [progress, setProgress] = useState(0)
 

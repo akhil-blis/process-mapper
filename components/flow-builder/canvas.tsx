@@ -12,6 +12,7 @@ type CanvasProps = {
   edges: FlowEdge[]
   onNodeUpdate: (nodeId: string, updates: Partial<FlowNode>) => void
   onNodeAdd?: (node: FlowNode) => void
+  onNodeDelete?: (nodeId: string) => void
   onEdgeAdd?: (edge: FlowEdge) => void
   onEdgeDelete?: (edgeId: string) => void
   onEdgeUpdate?: (edgeId: string, updates: Partial<FlowEdge>) => void
@@ -37,7 +38,7 @@ const CONNECTION_DOT_SIZE = 16
 const CONNECTION_DOT_Y_OFFSET = 20
 
 export const Canvas = forwardRef<CanvasRef, CanvasProps>(
-  ({ nodes, edges, onNodeUpdate, onNodeAdd, onEdgeAdd, onEdgeDelete, onEdgeUpdate }, ref) => {
+  ({ nodes, edges, onNodeUpdate, onNodeAdd, onNodeDelete, onEdgeAdd, onEdgeDelete, onEdgeUpdate }, ref) => {
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
     const [connectingFromNode, setConnectingFromNode] = useState<string | null>(null)
     const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 })
@@ -66,6 +67,16 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
     // Handle node edit button click
     const handleNodeEdit = (nodeId: string) => {
       setShowFloatingPanel(true)
+    }
+
+    // Handle node deletion
+    const handleNodeDelete = (nodeId: string) => {
+      if (onNodeDelete) {
+        onNodeDelete(nodeId)
+      }
+      // Close floating panel and clear selection
+      setSelectedNodeId(null)
+      setShowFloatingPanel(false)
     }
 
     // Enter placement mode
@@ -1002,6 +1013,21 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
                   </g>
                 )
               })}
+              {/* Grid cell highlighting during drag or placement */}
+              {highlightedCell && (isDragging || isPlacingNewNode) && (
+                <rect
+                  x={CANVAS_PADDING_X + highlightedCell.column * GRID_X_SPACING}
+                  y={CANVAS_PADDING_Y + highlightedCell.row * GRID_Y_SPACING}
+                  width={NODE_WIDTH}
+                  height={NODE_HEIGHT}
+                  rx="12"
+                  fill="rgba(139, 92, 246, 0.08)"
+                  stroke="rgb(139, 92, 246)"
+                  strokeWidth="2"
+                  strokeDasharray="6,4"
+                  className="pointer-events-none"
+                />
+              )}
               <defs>
                 <marker id="arrowhead-normal" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
                   <polygon points="0 0, 8 3, 0 6" fill="rgb(196 181 253)" />
@@ -1011,20 +1037,6 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
                 </marker>
               </defs>
             </svg>
-
-            {/* Grid cell highlighting during drag or placement */}
-            {highlightedCell && (isDragging || isPlacingNewNode) && (
-              <div
-                className="absolute border-2 border-dashed border-violet-400 bg-violet-50/30 rounded-lg pointer-events-none"
-                style={{
-                  left: CANVAS_PADDING_X + highlightedCell.column * GRID_X_SPACING,
-                  top: CANVAS_PADDING_Y + highlightedCell.row * GRID_Y_SPACING,
-                  width: NODE_WIDTH,
-                  height: NODE_HEIGHT,
-                  zIndex: 15,
-                }}
-              />
-            )}
 
             {/* Nodes */}
             {nodesWithPositions.map((node) => {
@@ -1100,6 +1112,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
                     isSelected={isSelected}
                     onSelect={setSelectedNodeId}
                     onEdit={handleNodeEdit}
+                    onDelete={handleNodeDelete} // Added onDelete prop
                     style={{
                       cursor: isSelected ? (isDraggingThis ? "grabbing" : "grab") : "pointer",
                       opacity: isDraggingThis ? 0.7 : 1,
@@ -1163,13 +1176,14 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
                   setShowFloatingPanel(false)
                 }}
                 onUpdate={onNodeUpdate}
+                onDelete={handleNodeDelete} // Added onDelete prop
                 className="floating-panel"
               />
             )
           })()}
 
         {/* Zoom Controls */}
-        <div className="zoom-controls absolute bottom-20 right-4 bg-white rounded-md shadow-md border p-2 space-y-1">
+        <div className="zoom-controls fixed bottom-20 right-4 bg-white rounded-md shadow-md border p-2 space-y-1">
           <button
             onClick={() => setTransform((prev) => ({ ...prev, scale: Math.min(3, prev.scale * 1.2) }))}
             className="block w-8 h-8 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-sm transition-colors text-lg font-bold"

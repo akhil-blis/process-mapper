@@ -9,9 +9,10 @@ type FloatingPanelProps = {
   position: { x: number; y: number }
   onClose: () => void
   onUpdate: (nodeId: string, updates: Partial<FlowNode>) => void
+  onDelete: (nodeId: string) => void
 }
 
-export function FloatingPanel({ node, position, onClose, onUpdate }: FloatingPanelProps) {
+export function FloatingPanel({ node, position, onClose, onUpdate, onDelete }: FloatingPanelProps) {
   const [showToolsDropdown, setShowToolsDropdown] = useState(false)
 
   const toggleTag = (tag: "friction" | "handoff" | "automated" | "trigger") => {
@@ -57,6 +58,7 @@ export function FloatingPanel({ node, position, onClose, onUpdate }: FloatingPan
         <div className="flex items-center gap-1">
           <button
             title="Delete"
+            onClick={() => onDelete(node.id)}
             className="p-1.5 rounded-md hover:bg-red-50 hover:text-red-700 transition-colors text-gray-400"
           >
             <Trash2 className="h-3.5 w-3.5" />

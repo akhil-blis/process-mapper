@@ -33,7 +33,7 @@ export function ToolPalette({ onOverrideClick, onExportClick, onAddNodeClick }: 
   ]
 
   return (
-    <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40">
+    <div className="fixed left-4 bottom-20 z-40">
       <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-3 space-y-2">
         <div className="text-xs font-medium text-gray-500 mb-3 px-1">Tools</div>
         {paletteItems.map((item) => (
