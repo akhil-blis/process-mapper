@@ -260,7 +260,7 @@ export default function OpportunityReportPage() {
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => setIsOverrideModalOpen(true)}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 transition-colors"
+                    className="flex items-center gap-2 px-3 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 transition-colors py-1.5.5.5 py-1.5"
                   >
                     <CodeIcon className="h-4 w-4" />
                     Override Data

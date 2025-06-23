@@ -48,8 +48,19 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
     const [editingConnectionId, setEditingConnectionId] = useState<string | null>(null)
     const [editingLabel, setEditingLabel] = useState("")
     const editInputRef = useRef<HTMLInputElement>(null)
+    const [isDragging, setIsDragging] = useState(false)
+    const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number } | null>(null)
+    const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+    const [highlightedCell, setHighlightedCell] = useState<{ row: number; column: number } | null>(null)
+    const [showFloatingPanel, setShowFloatingPanel] = useState(false)
+    const [hasInitiallyFitted, setHasInitiallyFitted] = useState(false)
 
     const selectedNode = selectedNodeId ? nodes.find((n) => n.id === selectedNodeId) : null
+
+    // Handle node edit button click
+    const handleNodeEdit = (nodeId: string) => {
+      setShowFloatingPanel(true)
+    }
 
     // Expose export function to parent
     useImperativeHandle(ref, () => ({
@@ -186,6 +197,51 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
         }
       },
     }))
+
+    // Helper function to find nearest empty grid cell
+    const findNearestEmptyCell = (targetRow: number, targetCol: number, nodes: FlowNode[]) => {
+      const occupied = new Set(nodes.map((n) => `${n.position.row},${n.position.column}`))
+
+      // Check if target position is already empty
+      if (!occupied.has(`${targetRow},${targetCol}`)) {
+        return { row: targetRow, column: targetCol }
+      }
+
+      // Search in expanding rings around the target
+      const offsets = [
+        [0, 0],
+        [0, 1],
+        [1, 0],
+        [0, -1],
+        [-1, 0],
+        [1, 1],
+        [-1, -1],
+        [1, -1],
+        [-1, 1],
+      ]
+      for (let radius = 1; radius < 10; radius++) {
+        for (const [dr, dc] of offsets) {
+          const r = targetRow + dr * radius
+          const c = targetCol + dc * radius
+          if (r >= 0 && c >= 0 && !occupied.has(`${r},${c}`)) {
+            return { row: r, column: c }
+          }
+        }
+      }
+
+      return { row: targetRow, column: targetCol }
+    }
+
+    // Helper function to convert canvas coordinates to grid position
+    const canvasToGridPosition = (canvasX: number, canvasY: number) => {
+      const adjustedX = canvasX - CANVAS_PADDING_X
+      const adjustedY = canvasY - CANVAS_PADDING_Y
+
+      const column = Math.round(adjustedX / GRID_X_SPACING)
+      const row = Math.round(adjustedY / GRID_Y_SPACING)
+
+      return { row: Math.max(0, row), column: Math.max(0, column) }
+    }
 
     // Calculate actual position from row/column coordinates
     const getGridPosition = (node: FlowNode) => {
@@ -422,21 +478,45 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
     )
 
     // Handle mouse events for panning
-    const handleMouseDown = useCallback((e: React.MouseEvent) => {
-      if (
-        e.button === 0 &&
-        !e.target.closest(".flow-node") &&
-        !e.target.closest(".connection-dot") &&
-        !e.target.closest(".connection-element")
-      ) {
-        setIsPanning(true)
-        setLastPanPoint({ x: e.clientX, y: e.clientY })
-        setSelectedNodeId(null)
-        setConnectingFromNode(null)
-        setSelectedConnectionId(null)
-        setEditingConnectionId(null)
-      }
-    }, [])
+    const handleMouseDown = useCallback(
+      (e: React.MouseEvent) => {
+        if (e.button === 0 && !e.target.closest(".connection-dot") && !e.target.closest(".connection-element")) {
+          const nodeElement = e.target.closest(".flow-node")
+
+          if (nodeElement) {
+            const nodeId = nodeElement.getAttribute("data-node-id")
+            const node = nodes.find((n) => n.id === nodeId)
+
+            if (node && selectedNodeId === nodeId) {
+              // Start dragging selected node
+              const rect = canvasRef.current?.getBoundingClientRect()
+              if (rect) {
+                const nodePos = getGridPosition(node)
+                setDragStartPos({ x: e.clientX, y: e.clientY })
+                setDragOffset({
+                  x: e.clientX - (rect.left + nodePos.x * transform.scale + transform.x),
+                  y: e.clientY - (rect.top + nodePos.y * transform.scale + transform.y),
+                })
+              }
+            } else if (node) {
+              // Select node (don't open panel yet)
+              setSelectedNodeId(nodeId)
+              setShowFloatingPanel(false)
+            }
+          } else {
+            // Click on empty canvas - start panning
+            setIsPanning(true)
+            setLastPanPoint({ x: e.clientX, y: e.clientY })
+            setSelectedNodeId(null)
+            setShowFloatingPanel(false)
+            setConnectingFromNode(null)
+            setSelectedConnectionId(null)
+            setEditingConnectionId(null)
+          }
+        }
+      },
+      [selectedNodeId, nodes, transform],
+    )
 
     const handleMouseMove = useCallback(
       (e: MouseEvent) => {
@@ -451,14 +531,45 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
           }))
 
           setLastPanPoint({ x: e.clientX, y: e.clientY })
+        } else if (dragStartPos && selectedNodeId && !isDragging) {
+          // Check if we've moved enough to start dragging
+          const deltaX = e.clientX - dragStartPos.x
+          const deltaY = e.clientY - dragStartPos.y
+          const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+
+          if (distance > 5) {
+            // 5px threshold to start drag
+            setIsDragging(true)
+          }
+        } else if (isDragging && selectedNodeId) {
+          // Update highlighted cell during drag
+          const rect = canvasRef.current?.getBoundingClientRect()
+          if (rect) {
+            const canvasX = (e.clientX - rect.left - transform.x) / transform.scale
+            const canvasY = (e.clientY - rect.top - transform.y) / transform.scale
+
+            const gridPos = canvasToGridPosition(canvasX, canvasY)
+            setHighlightedCell(gridPos)
+          }
         }
       },
-      [isPanning, lastPanPoint],
+      [isPanning, lastPanPoint, dragStartPos, selectedNodeId, isDragging, transform],
     )
 
     const handleMouseUp = useCallback(() => {
+      if (isDragging && selectedNodeId && highlightedCell) {
+        // Find nearest empty cell and update node position
+        const nearestCell = findNearestEmptyCell(highlightedCell.row, highlightedCell.column, nodes)
+        onNodeUpdate(selectedNodeId, {
+          position: { row: nearestCell.row, column: nearestCell.column },
+        })
+      }
+
       setIsPanning(false)
-    }, [])
+      setIsDragging(false)
+      setDragStartPos(null)
+      setHighlightedCell(null)
+    }, [isDragging, selectedNodeId, highlightedCell, nodes, onNodeUpdate])
 
     // Set up event listeners
     useEffect(() => {
@@ -476,10 +587,10 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
       }
     }, [handleWheel, handleMouseMove, handleMouseUp])
 
-    // Fit to frame on initial load
+    // Fit to frame ONLY on initial load, not on every node change
     useEffect(() => {
       const fitToFrame = () => {
-        if (nodes.length === 0) return
+        if (nodes.length === 0 || hasInitiallyFitted) return
 
         const maxCol = Math.max(...nodes.map((node) => node.position.column))
         const maxRow = Math.max(...nodes.map((node) => node.position.row))
@@ -504,11 +615,12 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
           const y = containerHeight / 2 - centerY * scale
 
           setTransform({ x, y, scale })
+          setHasInitiallyFitted(true)
         }
       }
 
       fitToFrame()
-    }, [nodes])
+    }, [nodes.length, hasInitiallyFitted]) // Only depend on nodes.length, not the full nodes array
 
     // Handle keyboard events for connection editing and deletion
     useEffect(() => {
@@ -592,6 +704,11 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
     const cancelConnectionEdit = () => {
       setEditingConnectionId(null)
       setEditingLabel("")
+    }
+
+    const handleConnectionClick = (connectionId: string, e: React.MouseEvent) => {
+      e.stopPropagation()
+      setSelectedConnectionId(connectionId)
     }
 
     const nodesWithPositions = getNodesWithCalculatedPositions()
@@ -820,73 +937,108 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
               </defs>
             </svg>
 
+            {/* Grid cell highlighting during drag */}
+            {isDragging && highlightedCell && (
+              <div
+                className="absolute border-2 border-dashed border-violet-400 bg-violet-50/30 rounded-lg pointer-events-none"
+                style={{
+                  left: CANVAS_PADDING_X + highlightedCell.column * GRID_X_SPACING,
+                  top: CANVAS_PADDING_Y + highlightedCell.row * GRID_Y_SPACING,
+                  width: NODE_WIDTH,
+                  height: NODE_HEIGHT,
+                  zIndex: 15,
+                }}
+              />
+            )}
+
             {/* Nodes */}
-            {nodesWithPositions.map((node) => (
-              <div key={node.id} className="flow-node relative">
-                {/* Left connection dot (input) */}
-                <div
-                  className={`connection-dot absolute w-4 h-4 rounded-full border-2 border-white shadow-md cursor-pointer transition-all ${
-                    connectingFromNode && connectingFromNode !== node.id
-                      ? "bg-green-500 hover:bg-green-600 ring-2 ring-green-300 animate-pulse"
-                      : connectingFromNode === node.id
-                        ? "bg-orange-500 hover:bg-orange-600 ring-2 ring-orange-300"
-                        : "bg-violet-500 hover:bg-violet-600"
-                  }`}
-                  style={{
-                    left: node.position.x - 8,
-                    top: node.position.y + CONNECTION_DOT_Y_OFFSET,
-                    zIndex: 20,
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleNodeConnectionClick(node.id)
-                  }}
-                  title={
-                    connectingFromNode === node.id
-                      ? "Cancel connection"
-                      : connectingFromNode
-                        ? "Complete connection to this node"
-                        : "Start connection from this node"
-                  }
-                />
+            {nodesWithPositions.map((node) => {
+              const isSelected = selectedNodeId === node.id
+              const isDraggingThis = isDragging && selectedNodeId === node.id
 
-                {/* Right connection dot (output) */}
+              return (
                 <div
-                  className={`connection-dot absolute w-4 h-4 rounded-full border-2 border-white shadow-md cursor-pointer transition-all ${
-                    connectingFromNode === node.id
-                      ? "bg-orange-500 hover:bg-orange-600 ring-2 ring-orange-300"
-                      : connectingFromNode
-                        ? "bg-gray-400 cursor-not-allowed"
-                        : "bg-violet-500 hover:bg-violet-600"
-                  }`}
+                  key={node.id}
+                  className="flow-node relative"
+                  data-node-id={node.id}
                   style={{
-                    left: node.position.x + NODE_WIDTH - 8,
-                    top: node.position.y + CONNECTION_DOT_Y_OFFSET,
-                    zIndex: 20,
+                    zIndex: isSelected ? 25 : 20,
                   }}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    if (!connectingFromNode || connectingFromNode === node.id) {
+                >
+                  {/* Connection dots remain the same */}
+                  <div
+                    className={`connection-dot absolute w-4 h-4 rounded-full border-2 border-white shadow-md cursor-pointer transition-all ${
+                      connectingFromNode && connectingFromNode !== node.id
+                        ? "bg-green-500 hover:bg-green-600 ring-2 ring-green-300 animate-pulse"
+                        : connectingFromNode === node.id
+                          ? "bg-orange-500 hover:bg-orange-600 ring-2 ring-orange-300"
+                          : "bg-violet-500 hover:bg-violet-600"
+                    }`}
+                    style={{
+                      left: node.position.x - 8,
+                      top: node.position.y + CONNECTION_DOT_Y_OFFSET,
+                      zIndex: 30,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
                       handleNodeConnectionClick(node.id)
+                    }}
+                    title={
+                      connectingFromNode === node.id
+                        ? "Cancel connection"
+                        : connectingFromNode
+                          ? "Complete connection to this node"
+                          : "Start connection from this node"
                     }
-                  }}
-                  title={
-                    connectingFromNode === node.id
-                      ? "Cancel connection"
-                      : connectingFromNode
-                        ? "Cannot start new connection while connecting"
-                        : "Start connection from this node"
-                  }
-                />
+                  />
 
-                <FlowNodeComponent node={node} isSelected={selectedNodeId === node.id} onSelect={setSelectedNodeId} />
-              </div>
-            ))}
+                  <div
+                    className={`connection-dot absolute w-4 h-4 rounded-full border-2 border-white shadow-md cursor-pointer transition-all ${
+                      connectingFromNode === node.id
+                        ? "bg-orange-500 hover:bg-orange-600 ring-2 ring-orange-300"
+                        : connectingFromNode
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "bg-violet-500 hover:bg-violet-600"
+                    }`}
+                    style={{
+                      left: node.position.x + NODE_WIDTH - 8,
+                      top: node.position.y + CONNECTION_DOT_Y_OFFSET,
+                      zIndex: 30,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (!connectingFromNode || connectingFromNode === node.id) {
+                        handleNodeConnectionClick(node.id)
+                      }
+                    }}
+                    title={
+                      connectingFromNode === node.id
+                        ? "Cancel connection"
+                        : connectingFromNode
+                          ? "Cannot start new connection while connecting"
+                          : "Start connection from this node"
+                    }
+                  />
+
+                  <FlowNodeComponent
+                    node={node}
+                    isSelected={isSelected}
+                    onSelect={setSelectedNodeId}
+                    onEdit={handleNodeEdit}
+                    style={{
+                      cursor: isSelected ? (isDraggingThis ? "grabbing" : "grab") : "pointer",
+                      opacity: isDraggingThis ? 0.7 : 1,
+                    }}
+                  />
+                </div>
+              )
+            })}
           </div>
         </div>
 
         {/* Floating Panel */}
         {selectedNode &&
+          showFloatingPanel &&
           (() => {
             const nodeWithPosition = nodesWithPositions.find((n) => n.id === selectedNode.id)
             if (!nodeWithPosition) return null
@@ -931,7 +1083,10 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
                   x: baseX,
                   y: constrainedY,
                 }}
-                onClose={() => setSelectedNodeId(null)}
+                onClose={() => {
+                  setSelectedNodeId(null)
+                  setShowFloatingPanel(false)
+                }}
                 onUpdate={onNodeUpdate}
                 className="floating-panel"
               />
@@ -1004,12 +1159,6 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
         </div>
       </div>
     )
-
-    function handleConnectionClick(connectionId: string, e: React.MouseEvent) {
-      e.stopPropagation()
-      if (editingConnectionId) return // Don't allow selection while editing
-      setSelectedConnectionId(connectionId === selectedConnectionId ? null : connectionId)
-    }
   },
 )
 
