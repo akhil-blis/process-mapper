@@ -62,7 +62,16 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
     // New state for placement mode
     const [isPlacingNewNode, setIsPlacingNewNode] = useState(false)
 
+    const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set())
+    const [isGroupDragging, setIsGroupDragging] = useState(false)
+    const [groupDragStartPos, setGroupDragStartPos] = useState<{ x: number; y: number } | null>(null)
+    const [groupDragOffset, setGroupDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+    const [groupDragPreview, setGroupDragPreview] = useState<
+      Array<{ nodeId: string; targetRow: number; targetCol: number }>
+    >([])
+
     const selectedNode = selectedNodeId ? nodes.find((n) => n.id === selectedNodeId) : null
+    const selectedNodes = nodes.filter((node) => selectedNodeIds.has(node.id))
 
     // Compute minimum grid coordinates for proper offset rendering
     const minRow = nodes.length > 0 ? Math.min(...nodes.map((n) => n.position.row)) : 0
@@ -297,6 +306,72 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
       }))
     }
 
+    // Helper function to get bounding box for selected nodes
+    const getBoundingBoxForSelectedNodes = (nodeIds: Set<string>) => {
+      const selectedNodes = nodes.filter((node) => nodeIds.has(node.id))
+      if (selectedNodes.length === 0) return null
+
+      const minRow = Math.min(...selectedNodes.map((n) => n.position.row))
+      const maxRow = Math.max(...selectedNodes.map((n) => n.position.row))
+      const minCol = Math.min(...selectedNodes.map((n) => n.position.column))
+      const maxCol = Math.max(...selectedNodes.map((n) => n.position.column))
+
+      return { minRow, maxRow, minCol, maxCol }
+    }
+
+    // Helper function to find valid positions for a group of nodes
+    const findNearestEmptyCellGroup = (
+      targetRow: number,
+      targetCol: number,
+      selectedNodeIds: Set<string>,
+      allNodes: FlowNode[],
+    ) => {
+      const selectedNodes = allNodes.filter((node) => selectedNodeIds.has(node.id))
+      const otherNodes = allNodes.filter((node) => !selectedNodeIds.has(node.id))
+
+      if (selectedNodes.length === 0) return []
+
+      // Calculate relative positions from the top-left node
+      const minRow = Math.min(...selectedNodes.map((n) => n.position.row))
+      const minCol = Math.min(...selectedNodes.map((n) => n.position.column))
+
+      const relativePositions = selectedNodes.map((node) => ({
+        nodeId: node.id,
+        deltaRow: node.position.row - minRow,
+        deltaCol: node.position.column - minCol,
+      }))
+
+      // Try to place the group starting from the target position
+      for (let offsetRow = 0; offsetRow < 5; offsetRow++) {
+        for (let offsetCol = 0; offsetCol < 5; offsetCol++) {
+          const baseRow = targetRow + offsetRow
+          const baseCol = targetCol + offsetCol
+
+          // Check if all nodes in the group can be placed without collision
+          const proposedPositions = relativePositions.map((rel) => ({
+            nodeId: rel.nodeId,
+            targetRow: baseRow + rel.deltaRow,
+            targetCol: baseCol + rel.deltaCol,
+          }))
+
+          const hasCollision = proposedPositions.some((pos) =>
+            otherNodes.some((node) => node.position.row === pos.targetRow && node.position.column === pos.targetCol),
+          )
+
+          if (!hasCollision) {
+            return proposedPositions
+          }
+        }
+      }
+
+      // Fallback: return original positions
+      return selectedNodes.map((node) => ({
+        nodeId: node.id,
+        targetRow: node.position.row,
+        targetCol: node.position.column,
+      }))
+    }
+
     // Helper function to detect overlapping connections and assign arc offsets
     const getConnectionArcOffsets = (
       edges: FlowEdge[],
@@ -515,7 +590,6 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
       [transform.scale],
     )
 
-    // Handle mouse events for panning
     const handleMouseDown = useCallback(
       (e: React.MouseEvent) => {
         if (e.button === 0 && !e.target.closest(".connection-dot") && !e.target.closest(".connection-element")) {
@@ -525,21 +599,47 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
             const nodeId = nodeElement.getAttribute("data-node-id")
             const node = nodes.find((n) => n.id === nodeId)
 
-            if (node && selectedNodeId === nodeId && !isPlacingNewNode) {
-              // Start dragging selected node
-              const rect = canvasRef.current?.getBoundingClientRect()
-              if (rect) {
-                const nodePos = getGridPosition(node, minRow, minCol)
-                setDragStartPos({ x: e.clientX, y: e.clientY })
-                setDragOffset({
-                  x: e.clientX - (rect.left + nodePos.x * transform.scale + transform.x),
-                  y: e.clientY - (rect.top + nodePos.y * transform.scale + transform.y),
+            if (node && !isPlacingNewNode) {
+              if (e.shiftKey) {
+                // Shift+Click: Toggle selection
+                setSelectedNodeIds((prev) => {
+                  const newSet = new Set(prev)
+                  if (newSet.has(nodeId)) {
+                    newSet.delete(nodeId)
+                  } else {
+                    newSet.add(nodeId)
+                  }
+                  return newSet
                 })
+                setSelectedNodeId(null)
+                setShowFloatingPanel(false)
+              } else if (selectedNodeIds.has(nodeId)) {
+                // Clicking on a selected node - prepare for group drag
+                const rect = canvasRef.current?.getBoundingClientRect()
+                if (rect) {
+                  setGroupDragStartPos({ x: e.clientX, y: e.clientY })
+                  setGroupDragOffset({
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top,
+                  })
+                }
+              } else {
+                // Single node selection
+                setSelectedNodeIds(new Set([nodeId]))
+                setSelectedNodeId(nodeId)
+                setShowFloatingPanel(false)
+
+                // Prepare for single node drag
+                const rect = canvasRef.current?.getBoundingClientRect()
+                if (rect) {
+                  const nodePos = getGridPosition(node, minRow, minCol)
+                  setDragStartPos({ x: e.clientX, y: e.clientY })
+                  setDragOffset({
+                    x: e.clientX - (rect.left + nodePos.x * transform.scale + transform.x),
+                    y: e.clientY - (rect.top + nodePos.y * transform.scale + transform.y),
+                  })
+                }
               }
-            } else if (node && !isPlacingNewNode) {
-              // Select node (don't open panel yet)
-              setSelectedNodeId(nodeId)
-              setShowFloatingPanel(false)
             }
           } else {
             // Click on empty canvas
@@ -559,13 +659,15 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
 
               onNodeAdd(newNode)
               setSelectedNodeId(newNode.id)
+              setSelectedNodeIds(new Set([newNode.id]))
               setShowFloatingPanel(true)
               exitPlacementMode()
             } else if (!isPlacingNewNode) {
-              // Start panning
+              // Start panning and clear selections
               setIsPanning(true)
               setLastPanPoint({ x: e.clientX, y: e.clientY })
               setSelectedNodeId(null)
+              setSelectedNodeIds(new Set())
               setShowFloatingPanel(false)
               setConnectingFromNode(null)
               setSelectedConnectionId(null)
@@ -574,7 +676,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
           }
         }
       },
-      [selectedNodeId, nodes, transform, isPlacingNewNode, highlightedCell, onNodeAdd, minRow, minCol],
+      [selectedNodeId, selectedNodeIds, nodes, transform, isPlacingNewNode, highlightedCell, onNodeAdd, minRow, minCol],
     )
 
     const handleMouseMove = useCallback(
@@ -590,18 +692,45 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
           }))
 
           setLastPanPoint({ x: e.clientX, y: e.clientY })
+        } else if (groupDragStartPos && selectedNodeIds.size > 0 && !isGroupDragging && !isPlacingNewNode) {
+          // Check if we've moved enough to start group dragging
+          const deltaX = e.clientX - groupDragStartPos.x
+          const deltaY = e.clientY - groupDragStartPos.y
+          const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+
+          if (distance > 5) {
+            setIsGroupDragging(true)
+          }
+        } else if (isGroupDragging && selectedNodeIds.size > 0 && !isPlacingNewNode) {
+          // Update group drag preview
+          const rect = canvasRef.current?.getBoundingClientRect()
+          if (rect) {
+            const canvasX = (e.clientX - rect.left - transform.x) / transform.scale
+            const canvasY = (e.clientY - rect.top - transform.y) / transform.scale
+
+            const gridPos = canvasToGridPosition(canvasX, canvasY)
+            const groupPositions = findNearestEmptyCellGroup(gridPos.row, gridPos.column, selectedNodeIds, nodes)
+
+            setGroupDragPreview(groupPositions)
+
+            // Set highlighted cell to the top-left of the group
+            if (groupPositions.length > 0) {
+              const minRow = Math.min(...groupPositions.map((p) => p.targetRow))
+              const minCol = Math.min(...groupPositions.map((p) => p.targetCol))
+              setHighlightedCell({ row: minRow, column: minCol })
+            }
+          }
         } else if (dragStartPos && selectedNodeId && !isDragging && !isPlacingNewNode) {
-          // Check if we've moved enough to start dragging
+          // Check if we've moved enough to start single node dragging
           const deltaX = e.clientX - dragStartPos.x
           const deltaY = e.clientY - dragStartPos.y
           const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
 
           if (distance > 5) {
-            // 5px threshold to start drag
             setIsDragging(true)
           }
         } else if (isDragging && selectedNodeId && !isPlacingNewNode) {
-          // Update highlighted cell during drag
+          // Update single node drag
           const rect = canvasRef.current?.getBoundingClientRect()
           if (rect) {
             const canvasX = (e.clientX - rect.left - transform.x) / transform.scale
@@ -635,6 +764,9 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
       [
         isPanning,
         lastPanPoint,
+        groupDragStartPos,
+        selectedNodeIds,
+        isGroupDragging,
         dragStartPos,
         selectedNodeId,
         isDragging,
@@ -647,8 +779,16 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
     )
 
     const handleMouseUp = useCallback(() => {
-      if (isDragging && selectedNodeId && highlightedCell) {
-        // Find nearest empty cell and update node position
+      if (isGroupDragging && selectedNodeIds.size > 0 && groupDragPreview.length > 0) {
+        // Apply group drag positions
+        groupDragPreview.forEach(({ nodeId, targetRow, targetCol }) => {
+          onNodeUpdate(nodeId, {
+            position: { row: targetRow, column: targetCol },
+          })
+        })
+        setGroupDragPreview([])
+      } else if (isDragging && selectedNodeId && highlightedCell) {
+        // Apply single node drag
         const nearestCell = findNearestEmptyCell(highlightedCell.row, highlightedCell.column, nodes)
         onNodeUpdate(selectedNodeId, {
           position: { row: nearestCell.row, column: nearestCell.column },
@@ -657,11 +797,23 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
 
       setIsPanning(false)
       setIsDragging(false)
+      setIsGroupDragging(false)
       setDragStartPos(null)
+      setGroupDragStartPos(null)
       if (!isPlacingNewNode) {
         setHighlightedCell(null)
       }
-    }, [isDragging, selectedNodeId, highlightedCell, nodes, onNodeUpdate, isPlacingNewNode])
+    }, [
+      isGroupDragging,
+      selectedNodeIds,
+      groupDragPreview,
+      isDragging,
+      selectedNodeId,
+      highlightedCell,
+      nodes,
+      onNodeUpdate,
+      isPlacingNewNode,
+    ])
 
     // Set up event listeners
     useEffect(() => {
@@ -1062,8 +1214,9 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
 
             {/* Nodes */}
             {nodesWithPositions.map((node) => {
-              const isSelected = selectedNodeId === node.id
-              const isDraggingThis = isDragging && selectedNodeId === node.id
+              const isSelected = selectedNodeId === node.id || selectedNodeIds.has(node.id)
+              const isDraggingThis =
+                (isDragging && selectedNodeId === node.id) || (isGroupDragging && selectedNodeIds.has(node.id))
 
               return (
                 <div
@@ -1074,6 +1227,20 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
                     zIndex: isSelected ? 25 : 20,
                   }}
                 >
+                  {/* Selection highlight for multi-selected nodes */}
+                  {selectedNodeIds.has(node.id) && selectedNodeIds.size > 1 && (
+                    <div
+                      className="absolute inset-0 border-2 border-violet-400 rounded-xl pointer-events-none"
+                      style={{
+                        left: node.position.x - 2,
+                        top: node.position.y - 2,
+                        width: NODE_WIDTH + 4,
+                        height: NODE_HEIGHT + 4,
+                        backgroundColor: "rgba(139, 92, 246, 0.05)",
+                      }}
+                    />
+                  )}
+
                   {/* Connection dots with proper positioning */}
                   <div
                     className={`connection-dot absolute w-4 h-4 rounded-full border-2 border-white shadow-md cursor-pointer transition-all ${
@@ -1143,6 +1310,54 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
                 </div>
               )
             })}
+
+            {/* Group drag preview */}
+            {isGroupDragging && groupDragPreview.length > 0 && (
+              <>
+                {/* Individual node previews */}
+                {groupDragPreview.map(({ nodeId, targetRow, targetCol }) => (
+                  <div
+                    key={`preview-${nodeId}`}
+                    className="absolute pointer-events-none"
+                    style={{
+                      left: CANVAS_PADDING_X + (targetCol - minCol) * GRID_X_SPACING,
+                      top: CANVAS_PADDING_Y + (targetRow - minRow) * GRID_Y_SPACING,
+                      width: NODE_WIDTH,
+                      height: NODE_HEIGHT,
+                    }}
+                  >
+                    <div className="w-full h-full border-2 border-violet-400 border-dashed rounded-xl bg-violet-50 opacity-60" />
+                  </div>
+                ))}
+
+                {/* Group bounding box */}
+                {(() => {
+                  const minPreviewRow = Math.min(...groupDragPreview.map((p) => p.targetRow))
+                  const maxPreviewRow = Math.max(...groupDragPreview.map((p) => p.targetRow))
+                  const minPreviewCol = Math.min(...groupDragPreview.map((p) => p.targetCol))
+                  const maxPreviewCol = Math.max(...groupDragPreview.map((p) => p.targetCol))
+
+                  return (
+                    <div
+                      className="absolute pointer-events-none border-2 border-violet-500 border-dashed rounded-xl"
+                      style={{
+                        left: CANVAS_PADDING_X + (minPreviewCol - minCol) * GRID_X_SPACING - 10,
+                        top: CANVAS_PADDING_Y + (minPreviewRow - minRow) * GRID_Y_SPACING - 10,
+                        width:
+                          (maxPreviewCol - minPreviewCol + 1) * NODE_WIDTH +
+                          (maxPreviewCol - minPreviewCol) * GRID_COL_GAP +
+                          20,
+                        height:
+                          (maxPreviewRow - minPreviewRow + 1) * NODE_HEIGHT +
+                          (maxPreviewRow - minPreviewRow) * GRID_ROW_GAP +
+                          20,
+                        backgroundColor: "rgba(139, 92, 246, 0.05)",
+                      }}
+                    />
+                  )
+                })()}
+              </>
+            )}
           </div>
         </div>
 
