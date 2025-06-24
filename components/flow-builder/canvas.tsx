@@ -64,6 +64,10 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
 
     const selectedNode = selectedNodeId ? nodes.find((n) => n.id === selectedNodeId) : null
 
+    // Compute minimum grid coordinates for proper offset rendering
+    const minRow = nodes.length > 0 ? Math.min(...nodes.map((n) => n.position.row)) : 0
+    const minCol = nodes.length > 0 ? Math.min(...nodes.map((n) => n.position.column)) : 0
+
     // Handle node edit button click
     const handleNodeEdit = (nodeId: string) => {
       setShowFloatingPanel(true)
@@ -104,7 +108,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
 
         if (!contentRef.current) throw new Error("Canvas not ready")
 
-        // Calculate the bounds of all nodes
+        // Calculate the bounds of all nodes (including negative positions)
         const maxCol = Math.max(...nodes.map((node) => node.position.column))
         const maxRow = Math.max(...nodes.map((node) => node.position.row))
         const minCol = Math.min(...nodes.map((node) => node.position.column))
@@ -121,7 +125,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
 
         console.log(`Initial export dimensions: ${contentWidth}x${contentHeight}`)
 
-        // Calculate the content positioning
+        // Calculate the content positioning (handle negative coordinates)
         const contentLeft = CANVAS_PADDING_X + minCol * GRID_X_SPACING - exportPadding
         const contentTop = CANVAS_PADDING_Y + minRow * GRID_Y_SPACING - exportPadding
 
@@ -257,7 +261,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
         for (const [dr, dc] of offsets) {
           const r = targetRow + dr * radius
           const c = targetCol + dc * radius
-          if (r >= 0 && c >= 0 && !occupied.has(`${r},${c}`)) {
+          if (!occupied.has(`${r},${c}`)) {
             return { row: r, column: c }
           }
         }
@@ -271,17 +275,17 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
       const adjustedX = canvasX - CANVAS_PADDING_X
       const adjustedY = canvasY - CANVAS_PADDING_Y
 
-      const column = Math.round(adjustedX / GRID_X_SPACING)
-      const row = Math.round(adjustedY / GRID_Y_SPACING)
+      const column = Math.round(adjustedX / GRID_X_SPACING) + minCol
+      const row = Math.round(adjustedY / GRID_Y_SPACING) + minRow
 
-      return { row: Math.max(0, row), column: Math.max(0, column) }
+      return { row, column }
     }
 
-    // Calculate actual position from row/column coordinates
-    const getGridPosition = (node: FlowNode) => {
+    // Calculate actual position from row/column coordinates with offset
+    const getGridPosition = (node: FlowNode, minRow: number, minCol: number) => {
       return {
-        x: CANVAS_PADDING_X + node.position.column * GRID_X_SPACING,
-        y: CANVAS_PADDING_Y + node.position.row * GRID_Y_SPACING,
+        x: CANVAS_PADDING_X + (node.position.column - minCol) * GRID_X_SPACING,
+        y: CANVAS_PADDING_Y + (node.position.row - minRow) * GRID_Y_SPACING,
       }
     }
 
@@ -289,7 +293,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
     const getNodesWithCalculatedPositions = () => {
       return nodes.map((node) => ({
         ...node,
-        position: getGridPosition(node),
+        position: getGridPosition(node, minRow, minCol),
       }))
     }
 
@@ -473,8 +477,8 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
     // Calculate canvas dimensions based on grid positions
     useEffect(() => {
       const calculateCanvasSize = () => {
-        // For infinite canvas, use much larger dimensions
-        const infiniteSize = 10000 // Large canvas size for infinite feel
+        // For infinite canvas, use much larger dimensions with extra space for negative coordinates
+        const infiniteSize = 20000 // Increased canvas size for infinite feel
 
         setCanvasDimensions({
           width: infiniteSize,
@@ -525,7 +529,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
               // Start dragging selected node
               const rect = canvasRef.current?.getBoundingClientRect()
               if (rect) {
-                const nodePos = getGridPosition(node)
+                const nodePos = getGridPosition(node, minRow, minCol)
                 setDragStartPos({ x: e.clientX, y: e.clientY })
                 setDragOffset({
                   x: e.clientX - (rect.left + nodePos.x * transform.scale + transform.x),
@@ -570,7 +574,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
           }
         }
       },
-      [selectedNodeId, nodes, transform, isPlacingNewNode, highlightedCell, onNodeAdd],
+      [selectedNodeId, nodes, transform, isPlacingNewNode, highlightedCell, onNodeAdd, minRow, minCol],
     )
 
     const handleMouseMove = useCallback(
@@ -620,7 +624,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
               (node) => node.position.row === gridPos.row && node.position.column === gridPos.column,
             )
 
-            if (!isOccupied && gridPos.row >= 0 && gridPos.column >= 0) {
+            if (!isOccupied) {
               setHighlightedCell(gridPos)
             } else {
               setHighlightedCell(null)
@@ -628,7 +632,18 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
           }
         }
       },
-      [isPanning, lastPanPoint, dragStartPos, selectedNodeId, isDragging, transform, isPlacingNewNode, nodes],
+      [
+        isPanning,
+        lastPanPoint,
+        dragStartPos,
+        selectedNodeId,
+        isDragging,
+        transform,
+        isPlacingNewNode,
+        nodes,
+        minRow,
+        minCol,
+      ],
     )
 
     const handleMouseUp = useCallback(() => {
@@ -674,6 +689,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
         const minCol = Math.min(...nodes.map((node) => node.position.column))
         const minRow = Math.min(...nodes.map((node) => node.position.row))
 
+        // Calculate the actual content dimensions
         const contentWidth = (maxCol - minCol + 1) * NODE_WIDTH + (maxCol - minCol) * GRID_COL_GAP
         const contentHeight = (maxRow - minRow + 1) * NODE_HEIGHT + (maxRow - minRow) * GRID_ROW_GAP
 
@@ -681,22 +697,29 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
           const containerWidth = canvasRef.current.clientWidth
           const containerHeight = canvasRef.current.clientHeight
 
-          const scaleX = (containerWidth - CANVAS_PADDING_X * 2) / contentWidth
-          const scaleY = (containerHeight - CANVAS_PADDING_Y * 2) / contentHeight
-          const scale = Math.min(1, Math.min(scaleX, scaleY))
+          // Add more generous padding for better visual spacing
+          const paddingX = 100
+          const paddingY = 100
 
-          const centerX = CANVAS_PADDING_X + minCol * GRID_X_SPACING + contentWidth / 2
-          const centerY = CANVAS_PADDING_Y + minRow * GRID_Y_SPACING + contentHeight / 2
+          // Calculate scale to fit content with padding
+          const scaleX = (containerWidth - paddingX * 2) / contentWidth
+          const scaleY = (containerHeight - paddingY * 2) / contentHeight
+          const scale = Math.min(1, Math.min(scaleX, scaleY)) // Don't zoom in beyond 100%
 
-          const x = containerWidth / 2 - centerX * scale
-          const y = containerHeight / 2 - centerY * scale
+          // Calculate the center of the content area (accounting for offset coordinates)
+          const contentCenterX = CANVAS_PADDING_X + ((minCol + maxCol) * GRID_X_SPACING) / 2
+          const contentCenterY = CANVAS_PADDING_Y + ((minRow + maxRow) * GRID_Y_SPACING) / 2
+
+          // Calculate transform to center the content
+          const x = containerWidth / 2 - contentCenterX * scale
+          const y = containerHeight / 2 - contentCenterY * scale
 
           setTransform({ x, y, scale })
-          setHasInitiallyFitted(true)
         }
       }
 
       fitToFrame()
+      setHasInitiallyFitted(true)
     }, [nodes.length, hasInitiallyFitted]) // Only depend on nodes.length, not the full nodes array
 
     // Handle keyboard events for connection editing and deletion
@@ -793,9 +816,9 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
     const nodesWithPositions = getNodesWithCalculatedPositions()
     const arcOffsets = getConnectionArcOffsets(edges, nodesWithPositions)
 
-    // Calculate grid offset for infinite feel
+    // Calculate grid offset for infinite feel with proper alignment for negative coordinates
     const baseGridSize = 20
-    const gridSize = Math.max(12, baseGridSize / Math.max(0.5, transform.scale)) // Adjusted scaling with minimum grid size
+    const gridSize = Math.max(12, baseGridSize / Math.max(0.5, transform.scale))
     const gridOffsetX =
       ((transform.x % (gridSize * transform.scale)) + gridSize * transform.scale) % (gridSize * transform.scale)
     const gridOffsetY =
@@ -803,13 +826,13 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
 
     return (
       <div className="relative w-full h-full overflow-hidden bg-gray-50">
-        {/* Infinite Grid Background */}
+        {/* Infinite Grid Background with proper offset for negative coordinates */}
         <div
           className="absolute inset-0"
           style={{
             backgroundImage: `radial-gradient(circle, #d1d5db 1px, transparent 1px)`,
             backgroundSize: `${gridSize * transform.scale}px ${gridSize * transform.scale}px`,
-            backgroundPosition: `${gridOffsetX}px ${gridOffsetY}px`,
+            backgroundPosition: `${gridOffsetX - minCol * GRID_X_SPACING * transform.scale}px ${gridOffsetY - minRow * GRID_Y_SPACING * transform.scale}px`,
             width: "200%",
             height: "200%",
             left: "-50%",
@@ -986,13 +1009,12 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
                           cy={midpoint.y}
                           r="12"
                           fill="rgb(139 92 246)"
-                          className="cursor-pointer hover:fill-violet-700"
                           style={{ pointerEvents: "all" }}
                           onClick={(e) => {
                             e.stopPropagation()
                             startEditingConnection(edge.id)
                           }}
-                          className="connection-element"
+                          className="connection-element cursor-pointer hover:fill-violet-700"
                         >
                           <title>Add connection label</title>
                         </circle>
@@ -1013,11 +1035,11 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
                   </g>
                 )
               })}
-              {/* Grid cell highlighting during drag or placement */}
+              {/* Grid cell highlighting during drag or placement with proper offset */}
               {highlightedCell && (isDragging || isPlacingNewNode) && (
                 <rect
-                  x={CANVAS_PADDING_X + highlightedCell.column * GRID_X_SPACING}
-                  y={CANVAS_PADDING_Y + highlightedCell.row * GRID_Y_SPACING}
+                  x={CANVAS_PADDING_X + (highlightedCell.column - minCol) * GRID_X_SPACING}
+                  y={CANVAS_PADDING_Y + (highlightedCell.row - minRow) * GRID_Y_SPACING}
                   width={NODE_WIDTH}
                   height={NODE_HEIGHT}
                   rx="12"
@@ -1052,7 +1074,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
                     zIndex: isSelected ? 25 : 20,
                   }}
                 >
-                  {/* Connection dots remain the same */}
+                  {/* Connection dots with proper positioning */}
                   <div
                     className={`connection-dot absolute w-4 h-4 rounded-full border-2 border-white shadow-md cursor-pointer transition-all ${
                       connectingFromNode && connectingFromNode !== node.id
@@ -1112,7 +1134,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
                     isSelected={isSelected}
                     onSelect={setSelectedNodeId}
                     onEdit={handleNodeEdit}
-                    onDelete={handleNodeDelete} // Added onDelete prop
+                    onDelete={handleNodeDelete}
                     style={{
                       cursor: isSelected ? (isDraggingThis ? "grabbing" : "grab") : "pointer",
                       opacity: isDraggingThis ? 0.7 : 1,
@@ -1124,7 +1146,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
           </div>
         </div>
 
-        {/* Floating Panel */}
+        {/* Floating Panel with proper positioning for negative coordinates */}
         {selectedNode &&
           showFloatingPanel &&
           (() => {
@@ -1176,7 +1198,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
                   setShowFloatingPanel(false)
                 }}
                 onUpdate={onNodeUpdate}
-                onDelete={handleNodeDelete} // Added onDelete prop
+                onDelete={handleNodeDelete}
                 className="floating-panel"
               />
             )
@@ -1205,6 +1227,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
               const minCol = Math.min(...nodes.map((node) => node.position.column))
               const minRow = Math.min(...nodes.map((node) => node.position.row))
 
+              // Calculate the actual content dimensions
               const contentWidth = (maxCol - minCol + 1) * NODE_WIDTH + (maxCol - minCol) * GRID_COL_GAP
               const contentHeight = (maxRow - minRow + 1) * NODE_HEIGHT + (maxRow - minRow) * GRID_ROW_GAP
 
@@ -1212,15 +1235,22 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
                 const containerWidth = canvasRef.current.clientWidth
                 const containerHeight = canvasRef.current.clientHeight
 
-                const scaleX = (containerWidth - CANVAS_PADDING_X * 2) / contentWidth
-                const scaleY = (containerHeight - CANVAS_PADDING_Y * 2) / contentHeight
-                const scale = Math.min(1, Math.min(scaleX, scaleY))
+                // Add more generous padding for better visual spacing
+                const paddingX = 100
+                const paddingY = 100
 
-                const centerX = CANVAS_PADDING_X + minCol * GRID_X_SPACING + contentWidth / 2
-                const centerY = CANVAS_PADDING_Y + minRow * GRID_Y_SPACING + contentHeight / 2
+                // Calculate scale to fit content with padding
+                const scaleX = (containerWidth - paddingX * 2) / contentWidth
+                const scaleY = (containerHeight - paddingY * 2) / contentHeight
+                const scale = Math.min(1, Math.min(scaleX, scaleY)) // Don't zoom in beyond 100%
 
-                const x = containerWidth / 2 - centerX * scale
-                const y = containerHeight / 2 - centerY * scale
+                // Calculate the center of the content area (accounting for offset coordinates)
+                const contentCenterX = CANVAS_PADDING_X + ((minCol + maxCol) * GRID_X_SPACING) / 2
+                const contentCenterY = CANVAS_PADDING_Y + ((minRow + maxRow) * GRID_Y_SPACING) / 2
+
+                // Calculate transform to center the content
+                const x = containerWidth / 2 - contentCenterX * scale
+                const y = containerHeight / 2 - contentCenterY * scale
 
                 setTransform({ x, y, scale })
               }
