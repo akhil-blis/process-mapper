@@ -1,5 +1,12 @@
 export type NodeType = "step" | "branch" | "note" | "subprocess" | "start" | "end"
 
+export type DataSource = {
+  label: string
+  type: "api" | "event_stream" | "internal_tool"
+  volume: number // per month
+  errorRate: number // 0-1 (e.g., 0.14 = 14%)
+}
+
 export type FlowNode = {
   id: string
   type: NodeType
@@ -18,6 +25,8 @@ export type FlowNode = {
     type: "file" | "link"
     url?: string
   }>
+  avgTimeSec?: number // Total average time to complete this step in seconds
+  simulatedSources?: DataSource[]
 }
 
 export type FlowEdge = {

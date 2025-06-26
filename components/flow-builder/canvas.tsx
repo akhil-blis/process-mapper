@@ -16,6 +16,7 @@ type CanvasProps = {
   onEdgeAdd?: (edge: FlowEdge) => void
   onEdgeDelete?: (edgeId: string) => void
   onEdgeUpdate?: (edgeId: string, updates: Partial<FlowEdge>) => void
+  onConnectDataSource?: (nodeId: string) => void
 }
 
 export type CanvasRef = {
@@ -38,7 +39,10 @@ const CONNECTION_DOT_SIZE = 16
 const CONNECTION_DOT_Y_OFFSET = 20
 
 export const Canvas = forwardRef<CanvasRef, CanvasProps>(
-  ({ nodes, edges, onNodeUpdate, onNodeAdd, onNodeDelete, onEdgeAdd, onEdgeDelete, onEdgeUpdate }, ref) => {
+  (
+    { nodes, edges, onNodeUpdate, onNodeAdd, onNodeDelete, onEdgeAdd, onEdgeDelete, onEdgeUpdate, onConnectDataSource },
+    ref,
+  ) => {
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
     const [connectingFromNode, setConnectingFromNode] = useState<string | null>(null)
     const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 })
@@ -1302,6 +1306,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
                     onSelect={setSelectedNodeId}
                     onEdit={handleNodeEdit}
                     onDelete={handleNodeDelete}
+                    onConnectDataSource={onConnectDataSource}
                     style={{
                       cursor: isSelected ? (isDraggingThis ? "grabbing" : "grab") : "pointer",
                       opacity: isDraggingThis ? 0.7 : 1,

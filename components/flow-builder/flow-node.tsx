@@ -3,7 +3,7 @@
 import type React from "react"
 
 import type { FlowNode } from "@/types/flow"
-import { AlertTriangle, ArrowRight, Zap, Play, Clock, Paperclip, Edit3 } from "lucide-react"
+import { AlertTriangle, ArrowRight, Zap, Play, Clock, Paperclip, Edit3, Database, Settings } from "lucide-react"
 
 type FlowNodeProps = {
   node: FlowNode
@@ -27,6 +27,18 @@ const tagColors = {
   trigger: "bg-blue-100 text-blue-600 border-blue-200",
 }
 
+const dataSourceTypeIcons = {
+  api: <Database className="h-3 w-3" />,
+  event_stream: <Zap className="h-3 w-3" />,
+  internal_tool: <Settings className="h-3 w-3" />,
+}
+
+const dataSourceTypeColors = {
+  api: "bg-blue-100 text-blue-600",
+  event_stream: "bg-purple-100 text-purple-600",
+  internal_tool: "bg-green-100 text-green-600",
+}
+
 export function FlowNodeComponent({ node, isSelected, onSelect, onEdit, style }: FlowNodeProps) {
   return (
     <div
@@ -42,11 +54,37 @@ export function FlowNodeComponent({ node, isSelected, onSelect, onEdit, style }:
         minHeight: "120px",
         ...style,
       }}
+      onClick={() => onSelect(node.id)}
     >
       {/* Node Header */}
       <div className="flex items-start justify-between p-4 pb-3">
         <div className="flex-1 min-w-0">
-          <h3 className="text-base font-semibold text-gray-900 leading-tight mb-2 pr-2 select-none">{node.title}</h3>
+          <div className="flex items-start justify-between mb-2">
+            <h3 className="text-base font-semibold text-gray-900 leading-tight pr-2 select-none flex-1">
+              {node.title}
+            </h3>
+
+            {/* Data Source Icons - Top Right */}
+            {node.simulatedSources && node.simulatedSources.length > 0 && (
+              <div className="flex gap-1 flex-shrink-0">
+                {node.simulatedSources.slice(0, 3).map((source, index) => (
+                  <div
+                    key={index}
+                    className={`w-5 h-5 rounded flex items-center justify-center ${dataSourceTypeColors[source.type]} select-none`}
+                    title={`${source.label} - ${source.volume.toLocaleString()}/mo, ${(source.errorRate * 100).toFixed(1)}% error rate`}
+                  >
+                    {dataSourceTypeIcons[source.type]}
+                  </div>
+                ))}
+                {node.simulatedSources.length > 3 && (
+                  <div className="w-5 h-5 rounded flex items-center justify-center bg-gray-100 text-gray-600 text-xs font-medium">
+                    +{node.simulatedSources.length - 3}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {node.role && (
             <div className="flex items-center gap-1.5 mb-3">
               <div className="w-2 h-2 bg-violet-400 rounded-full flex-shrink-0"></div>
@@ -83,7 +121,7 @@ export function FlowNodeComponent({ node, isSelected, onSelect, onEdit, style }:
           </div>
         )}
 
-        {/* Time and Attachments Info */}
+        {/* Bottom Row: Time/Attachments and Flag Tags */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 text-xs text-gray-500">
             {node.duration && (
@@ -102,7 +140,7 @@ export function FlowNodeComponent({ node, isSelected, onSelect, onEdit, style }:
             )}
           </div>
 
-          {/* Tags as rounded squares */}
+          {/* Flag Tags - Bottom Right */}
           {node.tags.length > 0 && (
             <div className="flex gap-1.5">
               {node.tags.map((tag) => (

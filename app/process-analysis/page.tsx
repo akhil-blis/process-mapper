@@ -21,6 +21,8 @@ import {
   Terminal,
   Mail,
   Download,
+  Database,
+  AlertCircle,
 } from "lucide-react"
 import { Logo } from "@/components/logo"
 import { AILoading } from "@/components/ai-loading"
@@ -70,6 +72,11 @@ type ProcessAnalysisData = {
         | "automation"
       impact: "high" | "medium" | "low"
       icon: string
+      dataSource?: {
+        hasDataSource: boolean
+        traffic?: string
+        volume?: string
+      }
     }>
   }
 }
@@ -154,6 +161,11 @@ const sampleData: ProcessAnalysisData = {
         category: "analysis",
         impact: "high",
         icon: "layers",
+        dataSource: {
+          hasDataSource: true,
+          traffic: "2.3k/day",
+          volume: "High",
+        },
       },
       {
         id: "summarize-feedback",
@@ -165,6 +177,9 @@ const sampleData: ProcessAnalysisData = {
         category: "summarization",
         impact: "medium",
         icon: "file-text",
+        dataSource: {
+          hasDataSource: false,
+        },
       },
       {
         id: "generate-checklist",
@@ -175,6 +190,11 @@ const sampleData: ProcessAnalysisData = {
         category: "generation",
         impact: "medium",
         icon: "clipboard-list",
+        dataSource: {
+          hasDataSource: true,
+          traffic: "450/week",
+          volume: "Medium",
+        },
       },
       {
         id: "automate-offers",
@@ -186,6 +206,9 @@ const sampleData: ProcessAnalysisData = {
         category: "generation",
         impact: "high",
         icon: "file-plus",
+        dataSource: {
+          hasDataSource: false,
+        },
       },
       {
         id: "smart-provisioning",
@@ -197,6 +220,11 @@ const sampleData: ProcessAnalysisData = {
         category: "automation",
         impact: "high",
         icon: "terminal",
+        dataSource: {
+          hasDataSource: true,
+          traffic: "1.8k/month",
+          volume: "Low",
+        },
       },
       {
         id: "reference-automation",
@@ -207,6 +235,9 @@ const sampleData: ProcessAnalysisData = {
         category: "automation",
         impact: "low",
         icon: "mail",
+        dataSource: {
+          hasDataSource: false,
+        },
       },
     ],
   },
@@ -357,6 +388,9 @@ export default function ProcessAnalysisPage() {
   const { processAnalysis } = analysisData
   const { meta, summary, insights, aiOpportunities } = processAnalysis
 
+  // Check if any opportunities have data sources
+  const hasDataSources = aiOpportunities.some((opportunity) => opportunity.dataSource?.hasDataSource)
+
   return (
     <div className="min-h-screen bg-gray-100">
       {isLoading && (
@@ -424,7 +458,9 @@ export default function ProcessAnalysisPage() {
                     </div>
 
                     {/* Metrics Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div
+                      className={`grid ${hasDataSources ? "grid-cols-1 md:grid-cols-3" : "grid-cols-2 md:grid-cols-4"} gap-4 mb-8`}
+                    >
                       <div className="bg-white rounded-lg border border-gray-200 p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -474,6 +510,34 @@ export default function ProcessAnalysisPage() {
                           </div>
                         </div>
                       </div>
+
+                      {hasDataSources && (
+                        <>
+                          <div className="bg-white rounded-lg border border-gray-200 p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                                <Database className="h-5 w-5 text-indigo-600" />
+                              </div>
+                              <div>
+                                <div className="text-2xl font-bold text-gray-900">1.2k</div>
+                                <div className="text-sm text-gray-500">Data Source Traffic</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="bg-white rounded-lg border border-gray-200 p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                                <AlertCircle className="h-5 w-5 text-orange-600" />
+                              </div>
+                              <div>
+                                <div className="text-2xl font-bold text-gray-900">2.1%</div>
+                                <div className="text-sm text-gray-500">Error Rate</div>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {/* Process Details */}
@@ -553,32 +617,38 @@ export default function ProcessAnalysisPage() {
                           >
                             <div className="text-white">{getIconComponent(opportunity.icon)}</div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`text-xs font-medium px-2 py-1 rounded ${
-                                opportunity.impact === "high"
-                                  ? "text-green-800 bg-green-200"
-                                  : opportunity.impact === "medium"
-                                    ? "text-yellow-800 bg-yellow-200"
-                                    : "text-red-800 bg-red-200"
-                              }`}
-                            >
-                              {opportunity.impact.charAt(0).toUpperCase() + opportunity.impact.slice(1)} Impact
-                            </span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleExportOpportunity(opportunity)
-                              }}
-                              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
-                              title="Export opportunity context"
-                            >
-                              <Download className="h-4 w-4" />
-                            </button>
-                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleExportOpportunity(opportunity)
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+                            title="Export opportunity context"
+                          >
+                            <Download className="h-4 w-4" />
+                          </button>
                         </div>
                         <h3 className="font-semibold text-gray-900 mb-2">{opportunity.title}</h3>
                         <p className="text-sm text-gray-600 mb-3">{opportunity.description}</p>
+                        <div className="flex items-center gap-2 mb-3">
+                          <span
+                            className={`text-xs font-medium px-2 py-1 rounded ${
+                              opportunity.impact === "high"
+                                ? "text-green-800 bg-green-200"
+                                : opportunity.impact === "medium"
+                                  ? "text-yellow-800 bg-yellow-200"
+                                  : "text-red-800 bg-red-200"
+                            }`}
+                          >
+                            {opportunity.impact.charAt(0).toUpperCase() + opportunity.impact.slice(1)} Impact
+                          </span>
+                          {opportunity.dataSource?.hasDataSource && (
+                            <div className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded bg-blue-100 text-blue-800">
+                              <Database className="h-3 w-3" />
+                              <span>{opportunity.dataSource.traffic}</span>
+                            </div>
+                          )}
+                        </div>
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-gray-500">{opportunity.targetStepTitle}</span>
                           <svg

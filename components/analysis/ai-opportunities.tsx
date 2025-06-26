@@ -16,50 +16,52 @@ export function AIOpportunities({ flowData }: AIOpportunitiesProps) {
     {
       id: "1",
       title: "Auto-score candidates",
-      description:
-        "Use AI to automatically score candidates based on resume content and role criteria, reducing manual screening time by 70%",
-      stepId: "4",
-      stepTitle: "Screen Candidates",
+      description: `With ${
+        flowData.nodes
+          .find((n) => n.id === "step-3a")
+          ?.simulatedSources?.reduce((sum, s) => sum + s.volume, 0)
+          ?.toLocaleString() || "18,200"
+      } applications/month and ${((flowData.nodes.find((n) => n.id === "step-3a")?.simulatedSources?.reduce((max, s) => Math.max(max, s.errorRate), 0) || 0.12) * 100).toFixed(1)}% error rate, AI scoring could reduce manual screening time by 70% and improve consistency`,
+      stepId: "step-3a",
+      stepTitle: "Inbound Applications Review",
       category: "analysis",
       impact: "high",
     },
     {
       id: "2",
-      title: "Summarize interview feedback",
-      description: "Automatically consolidate feedback from multiple interviewers into a structured decision summary",
-      stepId: "5",
-      stepTitle: "Interview Rounds",
-      category: "summarization",
-      impact: "medium",
+      title: "Smart interview scheduling",
+      description: `Calendar API shows ${flowData.nodes.find((n) => n.id === "step-5")?.simulatedSources?.[0]?.volume?.toLocaleString() || "4,500"} scheduling requests/month with ${((flowData.nodes.find((n) => n.id === "step-5")?.simulatedSources?.[0]?.errorRate || 0.15) * 100).toFixed(1)}% failure rate - AI can optimize scheduling and reduce conflicts`,
+      stepId: "step-5",
+      stepTitle: "Schedule Interview Loop",
+      category: "automation",
+      impact: "high",
     },
     {
       id: "3",
-      title: "Generate onboarding checklist",
-      description: "Auto-create personalized onboarding tasks based on role, department, and location requirements",
-      stepId: "8",
-      stepTitle: "Welcome Session",
-      category: "generation",
+      title: "Referral quality scoring",
+      description: `Employee referral system processes ${flowData.nodes.find((n) => n.id === "step-3b")?.simulatedSources?.[0]?.volume?.toLocaleString() || "1,200"} referrals/month - AI can score referral quality and prioritize high-potential candidates`,
+      stepId: "step-3b",
+      stepTitle: "Referrals Review",
+      category: "analysis",
       impact: "medium",
     },
     {
       id: "4",
-      title: "Automate offer letter creation",
-      description:
-        "Generate customized offer letters with correct compensation, benefits, and legal terms based on role and level",
-      stepId: "6",
-      stepTitle: "Make Offer",
-      category: "generation",
-      impact: "high",
+      title: "Multi-source application deduplication",
+      description: `With ${flowData.nodes.filter((n) => n.simulatedSources && n.simulatedSources.length > 0).length} different data sources feeding applications, AI can detect and merge duplicate candidates across platforms`,
+      stepId: "step-2",
+      stepTitle: "Distribute Job Posting",
+      category: "automation",
+      impact: "medium",
     },
     {
       id: "5",
-      title: "Smart IT provisioning",
-      description:
-        "Automatically determine and provision required IT access, tools, and accounts based on role and team",
-      stepId: "7",
-      stepTitle: "Set Up IT Access",
-      category: "automation",
-      impact: "high",
+      title: "Predictive headcount planning",
+      description: `Workday API shows ${flowData.nodes.find((n) => n.id === "start-1")?.simulatedSources?.[0]?.volume?.toLocaleString() || "2,400"} headcount requests/year - AI can predict hiring needs and pre-populate job descriptions`,
+      stepId: "start-1",
+      stepTitle: "Headcount Approved",
+      category: "generation",
+      impact: "low",
     },
   ]
 

@@ -9,6 +9,8 @@ import { Canvas, type CanvasRef } from "@/components/flow-builder/canvas"
 import { FooterSummary } from "@/components/flow-builder/footer-summary"
 import { AILoading } from "@/components/ai-loading"
 import { JSONOverrideModal } from "@/components/flow-builder/json-override-modal"
+import { DataSourceModal } from "@/components/flow-builder/data-source-modal"
+import type { DataSource } from "@/types/data-source"
 
 // Updated hiring process data with row/column positioning
 const initialFlowData: FlowData = {
@@ -24,6 +26,15 @@ const initialFlowData: FlowData = {
       tags: ["trigger"],
       duration: { value: 0, unit: "days" },
       attachments: [],
+      avgTimeSec: 0,
+      simulatedSources: [
+        {
+          label: "Workday API - Headcount Requests",
+          type: "api",
+          volume: 2400,
+          errorRate: 0.02,
+        },
+      ],
     },
     {
       id: "step-1",
@@ -41,6 +52,8 @@ const initialFlowData: FlowData = {
           url: "https://company.docs/templates/job-description.docx",
         },
       ],
+      avgTimeSec: 7200,
+      simulatedSources: [],
     },
     {
       id: "step-2",
@@ -52,6 +65,21 @@ const initialFlowData: FlowData = {
       tags: [],
       duration: { value: 1, unit: "days" },
       attachments: [],
+      avgTimeSec: 3600,
+      simulatedSources: [
+        {
+          label: "LinkedIn Jobs API",
+          type: "api",
+          volume: 1800,
+          errorRate: 0.05,
+        },
+        {
+          label: "Company Career Portal",
+          type: "internal_tool",
+          volume: 800,
+          errorRate: 0.01,
+        },
+      ],
     },
     {
       id: "step-3a",
@@ -63,6 +91,21 @@ const initialFlowData: FlowData = {
       tags: ["friction"],
       duration: { value: 2, unit: "days" },
       attachments: [],
+      avgTimeSec: 14400,
+      simulatedSources: [
+        {
+          label: "ATS Application Stream",
+          type: "event_stream",
+          volume: 15000,
+          errorRate: 0.12,
+        },
+        {
+          label: "Email Applications",
+          type: "internal_tool",
+          volume: 3200,
+          errorRate: 0.08,
+        },
+      ],
     },
     {
       id: "step-3b",
@@ -74,6 +117,15 @@ const initialFlowData: FlowData = {
       tags: [],
       duration: { value: 1, unit: "days" },
       attachments: [],
+      avgTimeSec: 7200,
+      simulatedSources: [
+        {
+          label: "Employee Referral System",
+          type: "internal_tool",
+          volume: 1200,
+          errorRate: 0.03,
+        },
+      ],
     },
     {
       id: "step-4",
@@ -91,6 +143,8 @@ const initialFlowData: FlowData = {
           url: "https://company.docs/recruiting/screening-checklist.pdf",
         },
       ],
+      avgTimeSec: 10800,
+      simulatedSources: [],
     },
     {
       id: "step-5",
@@ -102,6 +156,15 @@ const initialFlowData: FlowData = {
       tags: ["friction", "automated"],
       duration: { value: 3, unit: "days" },
       attachments: [],
+      avgTimeSec: 21600,
+      simulatedSources: [
+        {
+          label: "Calendar Integration API",
+          type: "api",
+          volume: 4500,
+          errorRate: 0.15,
+        },
+      ],
     },
     {
       id: "step-6",
@@ -119,6 +182,8 @@ const initialFlowData: FlowData = {
           url: "https://company.notion.com/eval-scorecard-template",
         },
       ],
+      avgTimeSec: 10800,
+      simulatedSources: [],
     },
     {
       id: "step-7",
@@ -130,6 +195,8 @@ const initialFlowData: FlowData = {
       tags: [],
       duration: { value: 1, unit: "days" },
       attachments: [],
+      avgTimeSec: 3600,
+      simulatedSources: [],
     },
     {
       id: "step-8a",
@@ -141,6 +208,8 @@ const initialFlowData: FlowData = {
       tags: ["friction"],
       duration: { value: 0, unit: "days" },
       attachments: [],
+      avgTimeSec: 0,
+      simulatedSources: [],
     },
     {
       id: "step-8b",
@@ -158,6 +227,8 @@ const initialFlowData: FlowData = {
           url: "https://company.docs/hr/offer-template.pdf",
         },
       ],
+      avgTimeSec: 7200,
+      simulatedSources: [],
     },
     {
       id: "step-9",
@@ -169,6 +240,8 @@ const initialFlowData: FlowData = {
       tags: ["trigger"],
       duration: { value: 0, unit: "days" },
       attachments: [],
+      avgTimeSec: 0,
+      simulatedSources: [],
     },
     {
       id: "subprocess-1",
@@ -191,6 +264,8 @@ const initialFlowData: FlowData = {
           url: "https://company.docs/it/asset-setup-request",
         },
       ],
+      avgTimeSec: 604800,
+      simulatedSources: [],
     },
     {
       id: "end-1",
@@ -202,6 +277,8 @@ const initialFlowData: FlowData = {
       tags: [],
       duration: { value: 0, unit: "days" },
       attachments: [],
+      avgTimeSec: 0,
+      simulatedSources: [],
     },
   ],
   edges: [
@@ -236,6 +313,9 @@ export default function FlowBuilder() {
   const inputFromHome = searchParams.get("input")
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false)
   const canvasRef = useRef<CanvasRef>(null)
+
+  const [isDataSourceModalOpen, setIsDataSourceModalOpen] = useState(false)
+  const [selectedNodeForDataSource, setSelectedNodeForDataSource] = useState<string | null>(null)
 
   useEffect(() => {
     if (inputFromHome) {
@@ -352,6 +432,23 @@ export default function FlowBuilder() {
     }))
   }
 
+  const handleConnectDataSource = (nodeId: string) => {
+    setSelectedNodeForDataSource(nodeId)
+    setIsDataSourceModalOpen(true)
+  }
+
+  const handleDataSourceSubmit = (dataSource: DataSource) => {
+    if (selectedNodeForDataSource) {
+      const node = flowData.nodes.find((n) => n.id === selectedNodeForDataSource)
+      const existingSources = node?.simulatedSources || []
+
+      handleNodeUpdate(selectedNodeForDataSource, {
+        simulatedSources: [...existingSources, dataSource],
+      })
+    }
+    setSelectedNodeForDataSource(null)
+  }
+
   return (
     <div className="h-screen bg-gray-50">
       {isLoading && (
@@ -382,6 +479,7 @@ export default function FlowBuilder() {
               onEdgeAdd={handleEdgeAdd}
               onEdgeDelete={handleEdgeDelete}
               onEdgeUpdate={handleEdgeUpdate}
+              onConnectDataSource={handleConnectDataSource}
             />
           </main>
           <ToolPalette
@@ -396,6 +494,19 @@ export default function FlowBuilder() {
         isOpen={isOverrideModalOpen}
         onClose={() => setIsOverrideModalOpen(false)}
         onSubmit={handleFlowOverride}
+      />
+      <DataSourceModal
+        isOpen={isDataSourceModalOpen}
+        onClose={() => {
+          setIsDataSourceModalOpen(false)
+          setSelectedNodeForDataSource(null)
+        }}
+        onSubmit={handleDataSourceSubmit}
+        existingSources={
+          selectedNodeForDataSource
+            ? flowData.nodes.find((n) => n.id === selectedNodeForDataSource)?.simulatedSources
+            : []
+        }
       />
     </div>
   )

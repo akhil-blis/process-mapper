@@ -2,7 +2,7 @@
 
 import type { FlowData } from "@/types/flow"
 import type { ProcessInsight } from "@/types/prototype"
-import { Clock, Users, AlertTriangle, ArrowRight, Zap, Play } from "lucide-react"
+import { Clock, Users, AlertTriangle, ArrowRight, Zap, Play, TrendingUp, AlertCircle } from "lucide-react"
 
 type ProcessSummaryProps = {
   flowData: FlowData
@@ -14,6 +14,19 @@ export function ProcessSummary({ flowData }: ProcessSummaryProps) {
   const frictionCount = flowData.nodes.filter((n) => n.tags?.includes("friction")).length
   const handoffCount = flowData.nodes.filter((n) => n.tags?.includes("handoff")).length
   const automatedCount = flowData.nodes.filter((n) => n.tags?.includes("automated")).length
+
+  // Calculate total volume from all connected data sources
+  const totalVolume = flowData.nodes.reduce((total, node) => {
+    return total + (node.simulatedSources?.reduce((nodeTotal, source) => nodeTotal + source.volume, 0) || 0)
+  }, 0)
+
+  // Calculate weighted average error rate or use highest error rate
+  const allSources = flowData.nodes.flatMap((node) => node.simulatedSources || [])
+  const weightedErrorRate =
+    allSources.length > 0
+      ? allSources.reduce((sum, source) => sum + source.errorRate * source.volume, 0) / totalVolume
+      : 0
+  const maxErrorRate = allSources.reduce((max, source) => Math.max(max, source.errorRate), 0)
 
   // Calculate total estimated time
   const totalMinutes = flowData.nodes.reduce((total, node) => {
@@ -40,36 +53,47 @@ export function ProcessSummary({ flowData }: ProcessSummaryProps) {
     return `${Math.round((minutes / 2400) * 10) / 10}w`
   }
 
+  const formatVolume = (volume: number) => {
+    if (volume >= 1000000) return `${(volume / 1000000).toFixed(1)}M`
+    if (volume >= 1000) return `${(volume / 1000).toFixed(1)}K`
+    return volume.toString()
+  }
+
   // Get all unique tools
   const allTools = new Set(flowData.nodes.flatMap((n) => n.tools || []))
 
-  // Sample insights - in a real app these would be AI-generated
+  // Enhanced insights with data source information
   const insights: ProcessInsight[] = [
     {
       id: "1",
-      title: "Bottleneck Detected",
-      description: "Step 4 (Screen Candidates) takes 4 hours and has friction tags - this is your main bottleneck",
+      title: "High-Volume Bottleneck",
+      description: `Step "Inbound Applications Review" processes ${
+        flowData.nodes
+          .find((n) => n.id === "step-3a")
+          ?.simulatedSources?.reduce((sum, s) => sum + s.volume, 0)
+          ?.toLocaleString() || "N/A"
+      }/month with ${((flowData.nodes.find((n) => n.id === "step-3a")?.simulatedSources?.reduce((max, s) => Math.max(max, s.errorRate), 0) || 0) * 100).toFixed(1)}% error rate - this is your main bottleneck`,
       type: "delay",
       severity: "high",
     },
     {
       id: "2",
-      title: "Multiple Handoffs",
-      description: `${handoffCount} handoff points between roles may cause delays and miscommunication`,
+      title: "Data Quality Issues",
+      description: `${(maxErrorRate * 100).toFixed(1)}% peak error rate across data sources may cause delays and rework`,
       type: "friction",
-      severity: "medium",
+      severity: maxErrorRate > 0.1 ? "high" : "medium",
     },
     {
       id: "3",
-      title: "Automation Opportunity",
-      description: `Only ${automatedCount} of ${stepCount} steps are automated - significant efficiency gains possible`,
+      title: "Volume Processing Gap",
+      description: `${formatVolume(totalVolume)}/month total volume with only ${automatedCount} of ${stepCount} steps automated`,
       type: "opportunity",
       severity: "medium",
     },
     {
       id: "4",
-      title: "Tool Fragmentation",
-      description: `${allTools.size} different tools used across the process - consider consolidation`,
+      title: "Integration Complexity",
+      description: `${allSources.length} data sources across ${allTools.size} different tools - consolidation opportunity`,
       type: "overlap",
       severity: "low",
     },
@@ -95,8 +119,8 @@ export function ProcessSummary({ flowData }: ProcessSummaryProps) {
         <p className="text-gray-600 mb-6">Overview of your {flowData.title} process structure and key metrics.</p>
       </div>
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      {/* Metrics Grid - Updated to 6 metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -144,6 +168,30 @@ export function ProcessSummary({ flowData }: ProcessSummaryProps) {
             </div>
           </div>
         </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+              <TrendingUp className="h-5 w-5 text-indigo-600" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-gray-900">{formatVolume(totalVolume)}</div>
+              <div className="text-sm text-gray-500">Total Volume/mo</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+              <AlertCircle className="h-5 w-5 text-orange-600" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-gray-900">{(maxErrorRate * 100).toFixed(1)}%</div>
+              <div className="text-sm text-gray-500">Peak Error Rate</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Process Details */}
@@ -161,17 +209,19 @@ export function ProcessSummary({ flowData }: ProcessSummaryProps) {
         </div>
 
         <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Tools & Systems</h3>
-          <div className="flex flex-wrap gap-2">
-            {Array.from(allTools)
-              .slice(0, 8)
-              .map((tool) => (
-                <span key={tool} className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-sm">
-                  {tool}
-                </span>
-              ))}
-            {allTools.size > 8 && (
-              <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-md text-sm">+{allTools.size - 8} more</span>
+          <h3 className="font-semibold text-gray-900 mb-4">Data Sources</h3>
+          <div className="space-y-2">
+            {allSources.slice(0, 6).map((source, index) => (
+              <div key={index} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                  <span className="text-sm text-gray-700 truncate">{source.label}</span>
+                </div>
+                <span className="text-xs text-gray-500">{formatVolume(source.volume)}/mo</span>
+              </div>
+            ))}
+            {allSources.length > 6 && (
+              <div className="text-xs text-gray-500 pl-4">+{allSources.length - 6} more sources</div>
             )}
           </div>
         </div>
