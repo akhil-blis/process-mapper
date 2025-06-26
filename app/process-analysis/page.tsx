@@ -608,7 +608,7 @@ export default function ProcessAnalysisPage() {
                     {aiOpportunities.map((opportunity) => (
                       <div
                         key={opportunity.id}
-                        onClick={() => router.push(`/opportunity/${opportunity.id}`)}
+                        onClick={() => router.push("/opportunity/auto-score-candidates")}
                         className={`group relative ${impactColors[opportunity.impact]} border rounded-lg p-4 hover:shadow-md transition-all duration-200 cursor-pointer hover:border-gray-300`}
                       >
                         <div className="flex items-start justify-between mb-3">
