@@ -47,7 +47,7 @@ type OpportunityData = {
   }
 }
 
-// Default opportunity data using your JSON structure
+// Default opportunity data - ALWAYS shows "Auto-score candidates" regardless of ID
 const defaultOpportunityData: OpportunityData = {
   title: "Auto-score candidates",
   summary:
@@ -151,33 +151,41 @@ export default function OpportunityReportPage() {
   const params = useParams()
   const opportunityId = params.id as string
 
-  const [isLoading, setIsLoading] = useState(() => {
-    if (typeof window !== "undefined") {
-      return !sessionStorage.getItem(`opportunity-${opportunityId}-processed`)
-    }
-    return true
-  })
-
+  // Force clear any cached data and always use the default "Auto-score candidates" data
+  const [isLoading, setIsLoading] = useState(true)
   const [opportunityData, setOpportunityData] = useState<OpportunityData>(defaultOpportunityData)
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false)
 
   useEffect(() => {
-    // Load any saved override data from localStorage
+    // Clear any existing localStorage data that might be interfering
     if (typeof window !== "undefined") {
-      const savedData = localStorage.getItem(`opportunity-${opportunityId}-data`)
-      if (savedData) {
-        try {
-          setOpportunityData(JSON.parse(savedData))
-        } catch (error) {
-          console.error("Failed to parse saved opportunity data:", error)
+      // Clear all opportunity-related localStorage items
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("opportunity-")) {
+          localStorage.removeItem(key)
         }
-      }
+      })
+
+      // Clear sessionStorage items too
+      Object.keys(sessionStorage).forEach((key) => {
+        if (key.startsWith("opportunity-")) {
+          sessionStorage.removeItem(key)
+        }
+      })
     }
+
+    // Always set to the default "Auto-score candidates" data
+    setOpportunityData(defaultOpportunityData)
+
+    // Set loading state based on fresh session check
+    const isProcessed =
+      typeof window !== "undefined" && sessionStorage.getItem(`opportunity-${opportunityId}-processed`)
+    setIsLoading(!isProcessed)
   }, [opportunityId])
 
   const handleOverrideSubmit = (data: OpportunityData) => {
     setOpportunityData(data)
-    // Save to localStorage
+    // Save to localStorage with the current opportunity ID
     if (typeof window !== "undefined") {
       localStorage.setItem(`opportunity-${opportunityId}-data`, JSON.stringify(data))
     }
@@ -279,6 +287,11 @@ export default function OpportunityReportPage() {
 
           <main className="py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 pb-16">
+              {/* Debug info - remove this in production */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm">
+                <strong>Debug Info:</strong> Opportunity ID: {opportunityId} | Title: {opportunityData.title}
+              </div>
+
               {/* 1. Opportunity Summary Header */}
               <section className="bg-white shadow-sm rounded-lg border border-gray-200 p-6 md:p-8">
                 <div className="mb-6">
