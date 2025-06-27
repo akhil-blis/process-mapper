@@ -51,13 +51,13 @@ type OpportunityData = {
 const defaultOpportunityData: OpportunityData = {
   title: "Auto-score candidates",
   summary:
-    "The candidate screening process currently takes 4 hours per batch and represents the biggest bottleneck in your hiring workflow. By implementing AI-powered candidate scoring, you can automatically evaluate resumes against job requirements, skills matching, and experience relevance.",
+    "The candidate screening process currently takes 4 hours per batch and represents the biggest bottleneck in your hiring workflow. With an average of 150-200 applications per job posting and 12-15 active positions monthly, you're processing ~2,400 resumes per month manually. By implementing AI-powered candidate scoring, you can automatically evaluate resumes against job requirements, skills matching, and experience relevance.",
   process_step: {
     label: "Screen Candidates",
   },
   roles_involved: ["HR Specialist", "Hiring Manager"],
   impact_estimate: {
-    description: "Saves ~3 hours per batch, +70% efficiency",
+    description: "Saves ~3 hours per batch, processes 2,400+ resumes/month, +70% efficiency",
   },
   why_this_matters: [
     {
@@ -72,7 +72,8 @@ const defaultOpportunityData: OpportunityData = {
     },
     {
       title: "High Volume Processing",
-      description: "Large number of applications makes manual review time-consuming and error-prone",
+      description:
+        "Processing 2,400+ resumes monthly across 12-15 active positions makes manual review extremely time-consuming and increases the likelihood of overlooking qualified candidates",
       type: "scale",
     },
   ],
@@ -81,7 +82,7 @@ const defaultOpportunityData: OpportunityData = {
       {
         label: "Resume Analysis",
         description:
-          "AI scans uploaded resumes to extract key information including skills, experience levels, education, certifications, and previous job titles.",
+          "AI scans uploaded resumes to extract key information including skills, experience levels, education, certifications, and previous job titles. Capable of processing 200+ resumes in minutes rather than hours.",
       },
       {
         label: "Job Requirements Matching",
@@ -101,7 +102,7 @@ const defaultOpportunityData: OpportunityData = {
       {
         label: "Prioritized Queue",
         description:
-          "Ranks candidates by score and presents them in order of best fit, allowing HR specialists to focus on top prospects first.",
+          "Ranks candidates by score and presents them in order of best fit, allowing HR specialists to focus on top prospects first. Reduces review time from 4 hours to 45 minutes per batch of 150-200 applications.",
       },
       {
         label: "Continuous Learning",
@@ -287,11 +288,6 @@ export default function OpportunityReportPage() {
 
           <main className="py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 pb-16">
-              {/* Debug info - remove this in production */}
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm">
-                <strong>Debug Info:</strong> Opportunity ID: {opportunityId} | Title: {opportunityData.title}
-              </div>
-
               {/* 1. Opportunity Summary Header */}
               <section className="bg-white shadow-sm rounded-lg border border-gray-200 p-6 md:p-8">
                 <div className="mb-6">
