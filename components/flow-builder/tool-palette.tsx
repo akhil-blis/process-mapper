@@ -1,13 +1,12 @@
 "use client"
-import { Plus, Code, Download } from "lucide-react"
+import { Plus, Download } from "lucide-react"
 
 type ToolPaletteProps = {
-  onOverrideClick?: () => void
   onExportClick?: () => void
   onAddNodeClick?: () => void
 }
 
-export function ToolPalette({ onOverrideClick, onExportClick, onAddNodeClick }: ToolPaletteProps) {
+export function ToolPalette({ onExportClick, onAddNodeClick }: ToolPaletteProps) {
   const paletteItems = [
     {
       id: "add-node",
@@ -24,14 +23,6 @@ export function ToolPalette({ onOverrideClick, onExportClick, onAddNodeClick }: 
       baseClasses: "bg-indigo-50 text-indigo-600",
       hoverClasses: "hover:bg-indigo-100 hover:text-indigo-700",
       onClick: onExportClick,
-    },
-    {
-      id: "override",
-      label: "Override",
-      icon: <Code className="h-4 w-4" />,
-      baseClasses: "bg-orange-50 text-orange-600",
-      hoverClasses: "hover:bg-orange-100 hover:text-orange-700",
-      onClick: onOverrideClick,
     },
   ]
 

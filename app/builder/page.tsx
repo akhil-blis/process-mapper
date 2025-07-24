@@ -467,7 +467,11 @@ export default function FlowBuilder() {
 
       {!isLoading && (
         <>
-          <TopNavigation title="Flow Builder" status="Auto-saved" />
+          <TopNavigation
+            title="Flow Builder"
+            status="Auto-saved"
+            onOverrideClick={() => setIsOverrideModalOpen(true)}
+          />
           <main className="h-full pt-16 pb-16">
             <Canvas
               ref={canvasRef}

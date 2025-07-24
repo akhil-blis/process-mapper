@@ -14,7 +14,6 @@ import {
   CodeIcon,
 } from "lucide-react"
 import { Logo } from "@/components/logo"
-import { AILoading } from "@/components/ai-loading"
 import { OpportunityOverrideModal } from "@/components/opportunity/opportunity-override-modal"
 
 type OpportunityData = {
@@ -152,36 +151,23 @@ export default function OpportunityReportPage() {
   const params = useParams()
   const opportunityId = params.id as string
 
-  // Force clear any cached data and always use the default "Auto-score candidates" data
-  const [isLoading, setIsLoading] = useState(true)
   const [opportunityData, setOpportunityData] = useState<OpportunityData>(defaultOpportunityData)
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false)
 
   useEffect(() => {
-    // Clear any existing localStorage data that might be interfering
+    // Check if there's custom data for this opportunity
     if (typeof window !== "undefined") {
-      // Clear all opportunity-related localStorage items
-      Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith("opportunity-")) {
-          localStorage.removeItem(key)
+      const savedData = localStorage.getItem(`opportunity-${opportunityId}-data`)
+      if (savedData) {
+        try {
+          const parsedData = JSON.parse(savedData)
+          setOpportunityData(parsedData)
+        } catch (error) {
+          console.error("Error parsing saved opportunity data:", error)
+          setOpportunityData(defaultOpportunityData)
         }
-      })
-
-      // Clear sessionStorage items too
-      Object.keys(sessionStorage).forEach((key) => {
-        if (key.startsWith("opportunity-")) {
-          sessionStorage.removeItem(key)
-        }
-      })
+      }
     }
-
-    // Always set to the default "Auto-score candidates" data
-    setOpportunityData(defaultOpportunityData)
-
-    // Set loading state based on fresh session check
-    const isProcessed =
-      typeof window !== "undefined" && sessionStorage.getItem(`opportunity-${opportunityId}-processed`)
-    setIsLoading(!isProcessed)
   }, [opportunityId])
 
   const handleOverrideSubmit = (data: OpportunityData) => {
@@ -234,274 +220,242 @@ export default function OpportunityReportPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {isLoading && (
-        <AILoading
-          title="Generating Opportunity Report"
-          subtitle="Analyzing impact and creating detailed recommendations"
-          onComplete={() => {
-            setIsLoading(false)
-            if (typeof window !== "undefined") {
-              sessionStorage.setItem(`opportunity-${opportunityId}-processed`, "true")
-            }
-          }}
-          duration={2500}
-        />
-      )}
-
-      {!isLoading && (
-        <>
-          {/* Top Navigation */}
-          <header className="sticky top-0 bg-white border-b border-gray-200 z-40">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex items-center justify-between h-16">
-                <div className="flex items-center">
-                  <button
-                    onClick={() => router.push("/")}
-                    className="flex-shrink-0 flex items-center hover:opacity-80 transition-opacity"
-                  >
-                    <Logo />
-                    <span className="ml-2.5 font-semibold text-gray-800 text-lg">Process Mapper</span>
-                  </button>
-                </div>
-                <div className="hidden md:block">
-                  <h2 className="text-lg font-medium text-gray-700">Opportunity Report</h2>
-                </div>
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => setIsOverrideModalOpen(true)}
-                    className="flex items-center gap-2 px-3 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 transition-colors py-1.5"
-                  >
-                    <CodeIcon className="h-4 w-4" />
-                    Override Data
-                  </button>
-                  <div className="flex items-center gap-2 text-sm text-green-600">
-                    <FileText className="h-4 w-4" />
-                    <span>Report Ready</span>
-                  </div>
-                  <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-semibold text-xs">
-                    JD
-                  </div>
-                </div>
-              </div>
-            </div>
-          </header>
-
-          <main className="py-8">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 pb-16">
-              {/* 1. Opportunity Summary Header */}
-              <section className="bg-white shadow-sm rounded-lg border border-gray-200 p-6 md:p-8">
-                <div className="mb-6">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-4">{opportunityData.title}</h1>
-                  <p className="text-lg text-gray-700 leading-relaxed mb-6">{opportunityData.summary}</p>
-
-                  {/* Info Cards Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 mt-0.5">
-                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <svg
-                              className="w-4 h-4 text-blue-600"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                              />
-                            </svg>
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-blue-900 mb-2">Process Step</h4>
-                          <p className="text-sm text-blue-700 opacity-90">{opportunityData.process_step.label}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 mt-0.5">
-                          <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                            <Users className="w-4 h-4 text-green-600" />
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-green-900 mb-2">Roles Involved</h4>
-                          <p className="text-sm text-green-700 opacity-90">
-                            {opportunityData.roles_involved.join(", ")}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 mt-0.5">
-                          <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <svg
-                              className="w-4 h-4 text-purple-600"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                              />
-                            </svg>
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-purple-900 mb-2">Impact Estimate</h4>
-                          <p className="text-sm text-purple-700 opacity-90">
-                            {opportunityData.impact_estimate.description}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* 2. Why This Matters */}
-              <section className="bg-white shadow-sm rounded-lg p-6 md:p-8">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">Why This Matters</h2>
-                  <p className="text-gray-600">
-                    These are the issues in your current process that led to this AI suggestion.
-                  </p>
-                </div>
-
-                <div className="grid md:grid-cols-3 gap-4">
-                  {opportunityData.why_this_matters.map((insight, index) => (
-                    <div key={index} className={`rounded-lg border p-4 ${getTypeColor(insight.type)}`}>
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 mt-0.5">{getTypeIcon(insight.type)}</div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold mb-2">{insight.title}</h4>
-                          <p className="text-sm opacity-90">{insight.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* 3. How It Works */}
-              <section className="bg-white shadow-sm rounded-lg p-6 md:p-8">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">How It Works</h2>
-                  <p className="text-gray-600">Detailed breakdown of the AI solution and its implementation.</p>
-                </div>
-
-                <div className="space-y-6">
-                  {opportunityData.how_it_works.steps.map((step, index) => {
-                    const colors = [
-                      "border-violet-500",
-                      "border-blue-500",
-                      "border-green-500",
-                      "border-yellow-500",
-                      "border-purple-500",
-                      "border-orange-500",
-                    ]
-                    return (
-                      <div key={index} className={`border-l-4 ${colors[index] || "border-gray-500"} pl-6`}>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">{step.label}</h3>
-                        <p className="text-gray-600 leading-relaxed">{step.description}</p>
-                      </div>
-                    )
-                  })}
-                </div>
-              </section>
-
-              {/* 4. MVP Plan */}
-              <section className="bg-white shadow-sm rounded-lg p-6 md:p-8">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">From Concept to MVP</h2>
-                  <p className="text-gray-600">
-                    Progressive development approach to build and validate this AI solution.
-                  </p>
-                </div>
-
-                <div className="space-y-6">
-                  {opportunityData.mvp_plan.phases.map((phase, index) => {
-                    const phaseColors = getPhaseBackgroundColor(index)
-                    return (
-                      <div key={index} className={`border-l-4 ${getPhaseColor(index)} pl-6`}>
-                        <div className="flex items-center gap-3 mb-3">
-                          <div
-                            className={`w-8 h-8 ${phaseColors.bg} ${phaseColors.text} rounded-full flex items-center justify-center text-sm font-bold`}
-                          >
-                            {index + 1}
-                          </div>
-                          <h3 className="text-lg font-semibold text-gray-900">{phase.title}</h3>
-                          <span className={`text-xs font-medium ${phaseColors.badge} px-2 py-1 rounded-full`}>
-                            {phase.duration}
-                          </span>
-                        </div>
-                        <div className="space-y-2 ml-11">
-                          {phase.steps.map((step, stepIndex) => (
-                            <p key={stepIndex} className="text-gray-700 font-normal">
-                              {step}
-                            </p>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </section>
-            </div>
-          </main>
-
-          {/* Footer Navigation */}
-          <footer className="fixed bottom-0 left-0 right-0 bg-violet-600 py-4 shadow-lg z-30">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+      {/* Top Navigation */}
+      <header className="sticky top-0 bg-white border-b border-gray-200 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
               <button
-                onClick={() => router.push("/process-analysis")}
-                className="text-sm text-white hover:text-violet-200 transition-colors flex items-center gap-2 px-3 py-2 rounded-md"
+                onClick={() => router.push("/")}
+                className="flex-shrink-0 flex items-center hover:opacity-80 transition-opacity"
               >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Process Analysis
+                <Logo />
+                <span className="ml-2.5 font-semibold text-gray-800 text-lg">Process Mapper</span>
               </button>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => {
-                    // In a real app, this would generate and download a PDF
-                    console.log("Downloading PDF report for:", opportunityId)
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-violet-700 text-white rounded-md hover:bg-violet-800 transition-colors text-sm font-medium"
-                >
-                  <Download className="h-4 w-4" />
-                  Export Report as PDF
-                </button>
-                <button
-                  onClick={() => router.push(`/prototype-plan/${opportunityId}`)}
-                  className="flex items-center gap-2 px-6 py-2 bg-white text-violet-700 rounded-md hover:bg-violet-50 transition-colors text-sm font-medium shadow-sm"
-                >
-                  <SquareChartGantt className="h-4 w-4" />
-                  Start Prototype Planning
-                </button>
+            </div>
+            <div className="hidden md:block">
+              <h2 className="text-lg font-medium text-gray-700">Opportunity Report</h2>
+            </div>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setIsOverrideModalOpen(true)}
+                className="flex items-center gap-2 px-3 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 transition-colors py-1.5"
+              >
+                <CodeIcon className="h-4 w-4" />
+                Override Data
+              </button>
+              <div className="flex items-center gap-2 text-sm text-green-600">
+                <FileText className="h-4 w-4" />
+                <span>Report Ready</span>
+              </div>
+              <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-semibold text-xs">
+                JD
               </div>
             </div>
-          </footer>
+          </div>
+        </div>
+      </header>
 
-          {/* Override Modal */}
-          <OpportunityOverrideModal
-            isOpen={isOverrideModalOpen}
-            onClose={() => setIsOverrideModalOpen(false)}
-            onSubmit={handleOverrideSubmit}
-            currentData={opportunityData}
-          />
-        </>
-      )}
+      <main className="py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 pb-16">
+          {/* 1. Opportunity Summary Header */}
+          <section className="bg-white shadow-sm rounded-lg border border-gray-200 p-6 md:p-8">
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900 mb-4">{opportunityData.title}</h1>
+              <p className="text-lg text-gray-700 leading-relaxed mb-6">{opportunityData.summary}</p>
+
+              {/* Info Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-blue-900 mb-2">Process Step</h4>
+                      <p className="text-sm text-blue-700 opacity-90">{opportunityData.process_step.label}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <Users className="w-4 h-4 text-green-600" />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-green-900 mb-2">Roles Involved</h4>
+                      <p className="text-sm text-green-700 opacity-90">{opportunityData.roles_involved.join(", ")}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-purple-900 mb-2">Impact Estimate</h4>
+                      <p className="text-sm text-purple-700 opacity-90">
+                        {opportunityData.impact_estimate.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* 2. Why This Matters */}
+          <section className="bg-white shadow-sm rounded-lg p-6 md:p-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">Why This Matters</h2>
+              <p className="text-gray-600">
+                These are the issues in your current process that led to this AI suggestion.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-4">
+              {opportunityData.why_this_matters.map((insight, index) => (
+                <div key={index} className={`rounded-lg border p-4 ${getTypeColor(insight.type)}`}>
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">{getTypeIcon(insight.type)}</div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold mb-2">{insight.title}</h4>
+                      <p className="text-sm opacity-90">{insight.description}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* 3. How It Works */}
+          <section className="bg-white shadow-sm rounded-lg p-6 md:p-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">How It Works</h2>
+              <p className="text-gray-600">Detailed breakdown of the AI solution and its implementation.</p>
+            </div>
+
+            <div className="space-y-6">
+              {opportunityData.how_it_works.steps.map((step, index) => {
+                const colors = [
+                  "border-violet-500",
+                  "border-blue-500",
+                  "border-green-500",
+                  "border-yellow-500",
+                  "border-purple-500",
+                  "border-orange-500",
+                ]
+                return (
+                  <div key={index} className={`border-l-4 ${colors[index] || "border-gray-500"} pl-6`}>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{step.label}</h3>
+                    <p className="text-gray-600 leading-relaxed">{step.description}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+
+          {/* 4. MVP Plan */}
+          <section className="bg-white shadow-sm rounded-lg p-6 md:p-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">From Concept to MVP</h2>
+              <p className="text-gray-600">Progressive development approach to build and validate this AI solution.</p>
+            </div>
+
+            <div className="space-y-6">
+              {opportunityData.mvp_plan.phases.map((phase, index) => {
+                const phaseColors = getPhaseBackgroundColor(index)
+                return (
+                  <div key={index} className={`border-l-4 ${getPhaseColor(index)} pl-6`}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div
+                        className={`w-8 h-8 ${phaseColors.bg} ${phaseColors.text} rounded-full flex items-center justify-center text-sm font-bold`}
+                      >
+                        {index + 1}
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900">{phase.title}</h3>
+                      <span className={`text-xs font-medium ${phaseColors.badge} px-2 py-1 rounded-full`}>
+                        {phase.duration}
+                      </span>
+                    </div>
+                    <div className="space-y-2 ml-11">
+                      {phase.steps.map((step, stepIndex) => (
+                        <p key={stepIndex} className="text-gray-700 font-normal">
+                          {step}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        </div>
+      </main>
+
+      {/* Footer Navigation */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-violet-600 py-4 shadow-lg z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+          <button
+            onClick={() => router.push("/process-analysis")}
+            className="text-sm text-white hover:text-violet-200 transition-colors flex items-center gap-2 px-3 py-2 rounded-md"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Process Analysis
+          </button>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                // In a real app, this would generate and download a PDF
+                console.log("Downloading PDF report for:", opportunityId)
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-violet-700 text-white rounded-md hover:bg-violet-800 transition-colors text-sm font-medium"
+            >
+              <Download className="h-4 w-4" />
+              Export Report as PDF
+            </button>
+            <button
+              onClick={() => router.push(`/prototype-plan/${opportunityId}`)}
+              className="flex items-center gap-2 px-6 py-2 bg-white text-violet-700 rounded-md hover:bg-violet-50 transition-colors text-sm font-medium shadow-sm"
+            >
+              <SquareChartGantt className="h-4 w-4" />
+              Start Prototype Planning
+            </button>
+          </div>
+        </div>
+      </footer>
+
+      {/* Override Modal */}
+      <OpportunityOverrideModal
+        isOpen={isOverrideModalOpen}
+        onClose={() => setIsOverrideModalOpen(false)}
+        onSubmit={handleOverrideSubmit}
+        currentData={opportunityData}
+      />
     </div>
   )
 }

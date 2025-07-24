@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { Check } from "lucide-react"
+import { Check, Code } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Logo } from "@/components/logo"
 
@@ -9,12 +9,14 @@ type TopNavigationProps = {
   title?: string
   status?: string
   statusIcon?: React.ReactNode
+  onOverrideClick?: () => void
 }
 
 export function TopNavigation({
   title = "Flow Builder",
   status = "Auto-saved",
   statusIcon = <Check className="h-4 w-4" />,
+  onOverrideClick,
 }: TopNavigationProps) {
   const router = useRouter()
 
@@ -35,9 +37,16 @@ export function TopNavigation({
             <h2 className="text-lg font-medium text-gray-700">{title}</h2>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              {statusIcon}
-              <span>{status}</span>
+            <button
+              onClick={onOverrideClick}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors border border-gray-200"
+            >
+              <Code className="h-4 w-4" />
+              Override Data
+            </button>
+            <div className="flex items-center gap-2 text-sm text-green-600">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span>Flow ready</span>
             </div>
             <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-semibold text-xs">
               JD

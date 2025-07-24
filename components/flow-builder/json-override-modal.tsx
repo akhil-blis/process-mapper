@@ -1,8 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { X, Code, AlertCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { X, AlertCircle } from "lucide-react"
 import type { FlowData } from "@/types/flow"
 
 type JSONOverrideModalProps = {
@@ -83,10 +82,7 @@ export function JSONOverrideModal({ isOpen, onClose, onSubmit }: JSONOverrideMod
       <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <Code className="h-5 w-5 text-orange-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Override Process Flow</h2>
-          </div>
+          <h2 className="text-xl font-semibold text-gray-900">Override Process Flow</h2>
           <button onClick={handleClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <X className="h-5 w-5 text-gray-500" />
           </button>
@@ -116,7 +112,7 @@ export function JSONOverrideModal({ isOpen, onClose, onSubmit }: JSONOverrideMod
   ],
   "edges": []
 }`}
-                className="w-full h-80 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 font-mono text-sm resize-none"
+                className="w-full h-80 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 font-mono text-sm resize-none"
               />
             </div>
 
@@ -141,17 +137,21 @@ export function JSONOverrideModal({ isOpen, onClose, onSubmit }: JSONOverrideMod
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
-          <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0 rounded-b-xl">
+          <button
+            onClick={handleClose}
+            disabled={isSubmitting}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 transition-colors"
+          >
             Cancel
-          </Button>
-          <Button
+          </button>
+          <button
             onClick={handleSubmit}
             disabled={isSubmitting || !jsonInput.trim()}
-            className="bg-orange-600 hover:bg-orange-700"
+            className="px-4 py-2 text-sm font-medium text-white bg-violet-600 border border-transparent rounded-lg hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isSubmitting ? "Processing..." : "Override Flow"}
-          </Button>
+            {isSubmitting ? "Processing..." : "Apply Changes"}
+          </button>
         </div>
       </div>
     </div>
