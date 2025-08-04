@@ -28,6 +28,7 @@ import {
   MessageSquare,
   BarChart3,
   Settings,
+  Trash2,
 } from "lucide-react"
 import { Logo } from "@/components/logo"
 import { ProcessAnalysisOverrideModal } from "@/components/analysis/process-analysis-override-modal"
@@ -315,6 +316,19 @@ export default function ProcessAnalysisPage() {
       },
     }))
     console.log("AI opportunity updated:", updatedOpportunity)
+  }
+
+  const handleDeleteOpportunity = (opportunityId: string) => {
+    if (confirm("Are you sure you want to delete this AI opportunity?")) {
+      setAnalysisData((prevData) => ({
+        ...prevData,
+        processAnalysis: {
+          ...prevData.processAnalysis,
+          aiOpportunities: prevData.processAnalysis.aiOpportunities.filter((opp) => opp.id !== opportunityId),
+        },
+      }))
+      console.log("AI opportunity deleted:", opportunityId)
+    }
   }
 
   const openEditModal = (opportunity: any) => {
@@ -665,6 +679,16 @@ export default function ProcessAnalysisPage() {
                           title="Export opportunity context"
                         >
                           <Download className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteOpportunity(opportunity.id)
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-white/50 rounded-md transition-colors"
+                          title="Delete opportunity"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
