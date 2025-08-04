@@ -1,176 +1,232 @@
 "use client"
 
 import { useState } from "react"
-import { X, AlertCircle } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { AlertCircle, CheckCircle2 } from "lucide-react"
 
-type OpportunityData = {
+interface OpportunityData {
   title: string
   summary: string
-  process_step: {
-    label: string
-  }
-  roles_involved: string[]
-  impact_estimate: {
-    description: string
-  }
-  why_this_matters: Array<{
+  processStep: string
+  rolesInvolved: string[]
+  impactEstimate: string
+  whyMatters: Array<{
     title: string
     description: string
-    type: string
+    type: "bottleneck" | "quality" | "scale"
   }>
-  how_it_works: {
-    steps: Array<{
-      label: string
-      description: string
-    }>
-  }
-  mvp_plan: {
-    phases: Array<{
-      title: string
+  howItWorks: Array<{
+    title: string
+    description: string
+  }>
+  mvpPlan: {
+    conceptValidation: {
+      duration: string
+      steps: Array<{
+        title: string
+        description: string
+      }>
+    }
+    prototypeDevelopment: {
       duration: string
       steps: string[]
-    }>
+    }
+    mvpIntegration: {
+      duration: string
+      steps: string[]
+    }
   }
 }
 
-type OpportunityOverrideModalProps = {
+interface OpportunityOverrideModalProps {
   isOpen: boolean
   onClose: () => void
   onSubmit: (data: OpportunityData) => void
-  currentData: OpportunityData
 }
 
-export function OpportunityOverrideModal({ isOpen, onClose, onSubmit, currentData }: OpportunityOverrideModalProps) {
+export function OpportunityOverrideModal({ isOpen, onClose, onSubmit }: OpportunityOverrideModalProps) {
   const [jsonInput, setJsonInput] = useState("")
-  const [error, setError] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [isValid, setIsValid] = useState(false)
 
-  const handleSubmit = () => {
+  const validateJSON = (input: string) => {
+    if (!input.trim()) {
+      setError(null)
+      setIsValid(false)
+      return
+    }
+
     try {
-      const parsed = JSON.parse(jsonInput)
+      const parsed = JSON.parse(input)
 
-      // Basic validation
-      if (!parsed.title || !parsed.summary || !parsed.process_step || !parsed.roles_involved) {
-        throw new Error("Missing required fields: title, summary, process_step, or roles_involved")
+      // Validate required fields - these match the actual OpportunityData structure
+      const requiredFields = [
+        "title",
+        "summary",
+        "processStep", // Changed from "process_step" to "processStep"
+        "rolesInvolved", // Changed from "roles_involved" to "rolesInvolved"
+        "impactEstimate", // Changed from "impact_estimate" to "impactEstimate"
+        "whyMatters", // Changed from "why_this_matters" to "whyMatters"
+        "howItWorks", // Changed from "how_it_works" to "howItWorks"
+        "mvpPlan", // Changed from "mvp_plan" to "mvpPlan"
+      ]
+
+      for (const field of requiredFields) {
+        if (!(field in parsed)) {
+          throw new Error(`Missing required field: ${field}`)
+        }
       }
 
-      if (!parsed.why_this_matters || !parsed.how_it_works || !parsed.mvp_plan) {
-        throw new Error("Missing required sections: why_this_matters, how_it_works, or mvp_plan")
+      // Validate nested structures
+      if (!Array.isArray(parsed.rolesInvolved)) {
+        throw new Error("rolesInvolved must be an array")
       }
 
-      onSubmit(parsed)
-      onClose()
-      setJsonInput("")
-      setError("")
+      if (!Array.isArray(parsed.whyMatters)) {
+        throw new Error("whyMatters must be an array")
+      }
+
+      if (!Array.isArray(parsed.howItWorks)) {
+        throw new Error("howItWorks must be an array")
+      }
+
+      if (!parsed.mvpPlan.conceptValidation || !Array.isArray(parsed.mvpPlan.conceptValidation.steps)) {
+        throw new Error("mvpPlan.conceptValidation.steps must be an array")
+      }
+
+      if (!parsed.mvpPlan.prototypeDevelopment || !Array.isArray(parsed.mvpPlan.prototypeDevelopment.steps)) {
+        throw new Error("mvpPlan.prototypeDevelopment.steps must be an array")
+      }
+
+      if (!parsed.mvpPlan.mvpIntegration || !Array.isArray(parsed.mvpPlan.mvpIntegration.steps)) {
+        throw new Error("mvpPlan.mvpIntegration.steps must be an array")
+      }
+
+      setError(null)
+      setIsValid(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid JSON format")
+      setIsValid(false)
     }
   }
 
-  const sampleJson = JSON.stringify(currentData, null, 2)
+  const handleInputChange = (value: string) => {
+    setJsonInput(value)
+    validateJSON(value)
+  }
 
-  if (!isOpen) return null
+  const handleSubmit = () => {
+    if (!isValid || !jsonInput.trim()) return
+
+    try {
+      const parsed = JSON.parse(jsonInput)
+      onSubmit(parsed)
+      onClose()
+      setJsonInput("")
+      setError(null)
+      setIsValid(false)
+    } catch (err) {
+      setError("Failed to parse JSON")
+    }
+  }
+
+  const handleClose = () => {
+    onClose()
+    setJsonInput("")
+    setError(null)
+    setIsValid(false)
+  }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
-          <h2 className="text-xl font-semibold text-gray-900">Override Opportunity Data</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <X className="h-5 w-5 text-gray-500" />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-3xl max-h-[76vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Override Opportunity Data</DialogTitle>
+        </DialogHeader>
 
-        {/* Content - Scrollable */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
-            <div className="space-y-3">
-              <label htmlFor="json-input" className="block text-sm font-medium text-gray-900">
-                Opportunity Data JSON
-              </label>
-              <textarea
-                id="json-input"
-                value={jsonInput}
-                onChange={(e) => {
-                  setJsonInput(e.target.value)
-                  setError("")
-                }}
-                placeholder={sampleJson}
-                className="w-full h-80 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 font-mono text-sm resize-none"
-              />
-            </div>
-
-            {error && (
-              <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-red-800">Validation Error</p>
-                  <p className="text-sm text-red-700 mt-1">{error}</p>
-                </div>
-              </div>
-            )}
-
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Expected Structure</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-gray-600">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">title</code>
-                    <span>Opportunity title</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">summary</code>
-                    <span>Detailed description</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">process_step</code>
-                    <span>Process step info</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">roles_involved</code>
-                    <span>Array of roles</span>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">impact_estimate</code>
-                    <span>Impact description</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">why_this_matters</code>
-                    <span>Array of insights</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">how_it_works</code>
-                    <span>Solution steps</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">mvp_plan</code>
-                    <span>Implementation phases</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div className="flex-1 flex flex-col gap-4 min-h-0">
+          <div className="text-sm text-gray-600">
+            Paste your opportunity data JSON below. The data should include all required fields like title, summary,
+            process_step, roles_involved, etc.
           </div>
+
+          <div className="flex-1 flex flex-col min-h-0">
+            <Textarea
+              value={jsonInput}
+              onChange={(e) => handleInputChange(e.target.value)}
+              placeholder={`{
+  "id": "auto-score-candidates",
+  "title": "Auto-score candidates",
+  "summary": "Description of the opportunity...",
+  "processStep": "Screen Candidates",
+  "rolesInvolved": ["HR Specialist", "Hiring Manager"],
+  "impactEstimate": "Saves time and improves efficiency...",
+  "whyMatters": [
+    {
+      "id": "1",
+      "type": "bottleneck",
+      "title": "Current bottleneck",
+      "description": "Manual process takes too long..."
+    }
+  ],
+  "howItWorks": [
+    {
+      "id": "1", 
+      "title": "Step 1",
+      "description": "How it works..."
+    }
+  ],
+  "mvpPlan": {
+    "conceptValidation": {
+      "duration": "2-3 weeks",
+      "steps": [
+        {
+          "id": "1",
+          "title": "Validate concept",
+          "description": "Test the approach..."
+        }
+      ]
+    },
+    "prototypeDevelopment": {
+      "duration": "4-6 weeks", 
+      "steps": [...]
+    },
+    "mvpIntegration": {
+      "duration": "3-4 weeks",
+      "steps": [...]
+    }
+  }
+}`}
+              className="flex-1 min-h-[300px] font-mono text-sm resize-none"
+            />
+          </div>
+
+          {error && (
+            <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+              <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-red-700">{error}</div>
+            </div>
+          )}
+
+          {isValid && !error && jsonInput.trim() && (
+            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <div className="text-sm text-green-700">Valid opportunity data format</div>
+            </div>
+          )}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0 rounded-b-xl">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 transition-colors"
-          >
+        <div className="flex justify-end gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={handleClose}>
             Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!jsonInput.trim()}
-            className="px-4 py-2 text-sm font-medium text-white bg-violet-600 border border-transparent rounded-lg hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
+          </Button>
+          <Button onClick={handleSubmit} disabled={!isValid || !jsonInput.trim()}>
             Apply Changes
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

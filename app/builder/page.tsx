@@ -7,7 +7,6 @@ import { TopNavigation } from "@/components/flow-builder/top-navigation"
 import { ToolPalette } from "@/components/flow-builder/tool-palette"
 import { Canvas, type CanvasRef } from "@/components/flow-builder/canvas"
 import { FooterSummary } from "@/components/flow-builder/footer-summary"
-import { AILoading } from "@/components/ai-loading"
 import { JSONOverrideModal } from "@/components/flow-builder/json-override-modal"
 import { DataSourceModal } from "@/components/flow-builder/data-source-modal"
 import type { DataSource } from "@/types/data-source"
@@ -302,13 +301,7 @@ const initialFlowData: FlowData = {
 
 export default function FlowBuilder() {
   const [flowData, setFlowData] = useState<FlowData>(initialFlowData)
-  const [isLoading, setIsLoading] = useState(() => {
-    // Only show loading if we haven't processed this page in this session
-    if (typeof window !== "undefined") {
-      return !sessionStorage.getItem("builder-processed")
-    }
-    return true
-  })
+  // Remove loading state entirely - just render immediately
   const searchParams = useSearchParams()
   const inputFromHome = searchParams.get("input")
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false)
@@ -378,46 +371,54 @@ export default function FlowBuilder() {
 
   const handleExport = async () => {
     try {
+      console.log("Starting export process...")
+
       // Generate JSON export
       const jsonData = JSON.stringify(flowData, null, 2)
       const jsonBlob = new Blob([jsonData], { type: "application/json" })
       const jsonUrl = URL.createObjectURL(jsonBlob)
 
-      // Generate image export
-      if (!canvasRef.current) {
-        throw new Error("Canvas not ready for export")
-      }
-
-      const imageDataUrl = await canvasRef.current.exportAsImage()
-
-      // Convert data URL to blob for download
-      const response = await fetch(imageDataUrl)
-      const imageBlob = await response.blob()
-      const imageUrl = URL.createObjectURL(imageBlob)
-
-      // Create download links
+      // Create timestamp and filename
       const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-")
       const baseName = flowData.title.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase()
 
-      // Download JSON
+      // Download JSON first
       const jsonLink = document.createElement("a")
       jsonLink.href = jsonUrl
       jsonLink.download = `${baseName}_${timestamp}.json`
       document.body.appendChild(jsonLink)
       jsonLink.click()
       document.body.removeChild(jsonLink)
-
-      // Download Image
-      const imageLink = document.createElement("a")
-      imageLink.href = imageUrl
-      imageLink.download = `${baseName}_${timestamp}.jpg`
-      document.body.appendChild(imageLink)
-      imageLink.click()
-      document.body.removeChild(imageLink)
-
-      // Clean up URLs
       URL.revokeObjectURL(jsonUrl)
-      URL.revokeObjectURL(imageUrl)
+
+      // Try to export image if canvas is available
+      if (canvasRef.current) {
+        try {
+          const imageDataUrl = await canvasRef.current.exportAsImage()
+
+          // Convert data URL to blob for download
+          const response = await fetch(imageDataUrl)
+          const imageBlob = await response.blob()
+          const imageUrl = URL.createObjectURL(imageBlob)
+
+          // Download Image
+          const imageLink = document.createElement("a")
+          imageLink.href = imageUrl
+          imageLink.download = `${baseName}_${timestamp}.png`
+          document.body.appendChild(imageLink)
+          imageLink.click()
+          document.body.removeChild(imageLink)
+          URL.revokeObjectURL(imageUrl)
+
+          console.log("Export completed successfully")
+        } catch (imageError) {
+          console.warn("Image export failed, but JSON was exported:", imageError)
+          alert("Flow data exported as JSON. Image export failed - this feature may not be fully implemented yet.")
+        }
+      } else {
+        console.warn("Canvas not available for image export")
+        alert("Flow data exported as JSON. Image export not available.")
+      }
     } catch (error) {
       console.error("Export failed:", error)
       alert("Export failed. Please try again.")
@@ -451,49 +452,27 @@ export default function FlowBuilder() {
 
   return (
     <div className="h-screen bg-gray-50">
-      {isLoading && (
-        <AILoading
-          title="Generating Your Flow"
-          subtitle="Converting your process description into a visual workflow"
-          onComplete={() => {
-            setIsLoading(false)
-            if (typeof window !== "undefined") {
-              sessionStorage.setItem("builder-processed", "true")
-            }
-          }}
-          duration={2500}
+      <TopNavigation title="Flow Builder" status="Auto-saved" onOverrideClick={() => setIsOverrideModalOpen(true)} />
+      <main className="h-full pt-16 pb-16">
+        <Canvas
+          ref={canvasRef}
+          nodes={flowData.nodes}
+          edges={flowData.edges}
+          onNodeUpdate={handleNodeUpdate}
+          onNodeAdd={handleNodeAdd}
+          onNodeDelete={handleNodeDelete}
+          onEdgeAdd={handleEdgeAdd}
+          onEdgeDelete={handleEdgeDelete}
+          onEdgeUpdate={handleEdgeUpdate}
+          onConnectDataSource={handleConnectDataSource}
         />
-      )}
-
-      {!isLoading && (
-        <>
-          <TopNavigation
-            title="Flow Builder"
-            status="Auto-saved"
-            onOverrideClick={() => setIsOverrideModalOpen(true)}
-          />
-          <main className="h-full pt-16 pb-16">
-            <Canvas
-              ref={canvasRef}
-              nodes={flowData.nodes}
-              edges={flowData.edges}
-              onNodeUpdate={handleNodeUpdate}
-              onNodeAdd={handleNodeAdd}
-              onNodeDelete={handleNodeDelete}
-              onEdgeAdd={handleEdgeAdd}
-              onEdgeDelete={handleEdgeDelete}
-              onEdgeUpdate={handleEdgeUpdate}
-              onConnectDataSource={handleConnectDataSource}
-            />
-          </main>
-          <ToolPalette
-            onOverrideClick={() => setIsOverrideModalOpen(true)}
-            onExportClick={handleExport}
-            onAddNodeClick={handleAddNodeClick}
-          />
-          <FooterSummary flowData={flowData} />
-        </>
-      )}
+      </main>
+      <ToolPalette
+        onOverrideClick={() => setIsOverrideModalOpen(true)}
+        onExportClick={handleExport}
+        onAddNodeClick={handleAddNodeClick}
+      />
+      <FooterSummary flowData={flowData} />
       <JSONOverrideModal
         isOpen={isOverrideModalOpen}
         onClose={() => setIsOverrideModalOpen(false)}

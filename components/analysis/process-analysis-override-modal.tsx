@@ -1,9 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { X, AlertCircle } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { AlertCircle, CheckCircle2 } from "lucide-react"
 
-type ProcessAnalysisData = {
+interface ProcessAnalysisData {
   processAnalysis: {
     meta: {
       processTitle: string
@@ -26,7 +29,7 @@ type ProcessAnalysisData = {
       id: string
       title: string
       description: string
-      type: "delay" | "friction" | "overlap"
+      type: "delay" | "friction" | "overlap" | "opportunity"
       severity: "high" | "medium" | "low"
       icon: string
     }>
@@ -36,14 +39,26 @@ type ProcessAnalysisData = {
       description: string
       targetStepId: string
       targetStepTitle: string
-      category: "classification" | "decision" | "summarization" | "analysis" | "communication"
+      category:
+        | "automation"
+        | "summarization"
+        | "generation"
+        | "analysis"
+        | "classification"
+        | "decision"
+        | "communication"
       impact: "high" | "medium" | "low"
       icon: string
+      dataSource?: {
+        hasDataSource: boolean
+        traffic?: string
+        volume?: string
+      }
     }>
   }
 }
 
-type ProcessAnalysisOverrideModalProps = {
+interface ProcessAnalysisOverrideModalProps {
   isOpen: boolean
   onClose: () => void
   onSubmit: (data: ProcessAnalysisData) => void
@@ -51,59 +66,164 @@ type ProcessAnalysisOverrideModalProps = {
 
 export function ProcessAnalysisOverrideModal({ isOpen, onClose, onSubmit }: ProcessAnalysisOverrideModalProps) {
   const [jsonInput, setJsonInput] = useState("")
-  const [error, setError] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [isValid, setIsValid] = useState(false)
 
-  const handleSubmit = () => {
+  const validateJSON = (input: string) => {
+    if (!input.trim()) {
+      setError(null)
+      setIsValid(false)
+      return
+    }
+
     try {
-      const parsed = JSON.parse(jsonInput)
+      const parsed = JSON.parse(input)
 
-      // Basic validation
+      // Validate top-level structure
       if (!parsed.processAnalysis) {
-        throw new Error("Missing 'processAnalysis' root object")
+        throw new Error("Missing required field: processAnalysis")
       }
 
-      if (
-        !parsed.processAnalysis.meta ||
-        !parsed.processAnalysis.summary ||
-        !parsed.processAnalysis.insights ||
-        !parsed.processAnalysis.aiOpportunities
-      ) {
-        throw new Error("Missing required sections: meta, summary, insights, or aiOpportunities")
+      const { processAnalysis } = parsed
+
+      // Validate meta section
+      if (!processAnalysis.meta) {
+        throw new Error("Missing required field: processAnalysis.meta")
+      }
+      if (!processAnalysis.meta.processTitle) {
+        throw new Error("Missing required field: processAnalysis.meta.processTitle")
+      }
+      if (!processAnalysis.meta.source) {
+        throw new Error("Missing required field: processAnalysis.meta.source")
+      }
+      if (!processAnalysis.meta.analysisDate) {
+        throw new Error("Missing required field: processAnalysis.meta.analysisDate")
       }
 
-      onSubmit(parsed)
-      onClose()
-      setJsonInput("")
-      setError("")
+      // Validate summary section
+      if (!processAnalysis.summary) {
+        throw new Error("Missing required field: processAnalysis.summary")
+      }
+      if (!processAnalysis.summary.metrics) {
+        throw new Error("Missing required field: processAnalysis.summary.metrics")
+      }
+      if (!Array.isArray(processAnalysis.summary.roles)) {
+        throw new Error("processAnalysis.summary.roles must be an array")
+      }
+      if (!Array.isArray(processAnalysis.summary.tools)) {
+        throw new Error("processAnalysis.summary.tools must be an array")
+      }
+
+      // Validate insights array
+      if (!Array.isArray(processAnalysis.insights)) {
+        throw new Error("processAnalysis.insights must be an array")
+      }
+
+      // Validate aiOpportunities array
+      if (!Array.isArray(processAnalysis.aiOpportunities)) {
+        throw new Error("processAnalysis.aiOpportunities must be an array")
+      }
+
+      // Validate insights structure
+      for (const insight of processAnalysis.insights) {
+        if (!insight.id || !insight.title || !insight.description || !insight.type || !insight.severity) {
+          throw new Error("Each insight must have id, title, description, type, and severity")
+        }
+      }
+
+      // Validate aiOpportunities structure
+      for (const opportunity of processAnalysis.aiOpportunities) {
+        if (
+          !opportunity.id ||
+          !opportunity.title ||
+          !opportunity.description ||
+          !opportunity.targetStepId ||
+          !opportunity.targetStepTitle ||
+          !opportunity.category ||
+          !opportunity.impact
+        ) {
+          throw new Error(
+            "Each AI opportunity must have id, title, description, targetStepId, targetStepTitle, category, and impact",
+          )
+        }
+      }
+
+      setError(null)
+      setIsValid(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid JSON format")
+      setIsValid(false)
     }
   }
 
-  const sampleJson = `{
+  const handleInputChange = (value: string) => {
+    setJsonInput(value)
+    validateJSON(value)
+  }
+
+  const handleSubmit = () => {
+    if (!isValid || !jsonInput.trim()) return
+
+    try {
+      const parsed = JSON.parse(jsonInput)
+      onSubmit(parsed)
+      onClose()
+      setJsonInput("")
+      setError(null)
+      setIsValid(false)
+    } catch (err) {
+      setError("Failed to parse JSON")
+    }
+  }
+
+  const handleClose = () => {
+    onClose()
+    setJsonInput("")
+    setError(null)
+    setIsValid(false)
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-3xl max-h-[76vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Override Process Analysis Data</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex-1 flex flex-col gap-4 min-h-0">
+          <div className="text-sm text-gray-600">
+            Paste your process analysis JSON below. The data should include process details, metrics, insights, and AI
+            opportunities.
+          </div>
+
+          <div className="flex-1 flex flex-col min-h-0">
+            <Textarea
+              value={jsonInput}
+              onChange={(e) => handleInputChange(e.target.value)}
+              placeholder={`{
   "processAnalysis": {
     "meta": {
-      "processTitle": "Your Process Name",
+      "processTitle": "New Employee Onboarding",
       "source": "uploadedFlow",
       "analysisDate": "2025-06-19"
     },
     "summary": {
       "metrics": {
-        "stepCount": 5,
-        "roleCount": 2,
-        "frictionCount": 1,
-        "handoffCount": 1,
+        "stepCount": 8,
+        "roleCount": 4,
+        "frictionCount": 2,
+        "handoffCount": 2,
         "automatedCount": 1,
-        "estimatedDurationMinutes": 120
+        "estimatedDurationMinutes": 5040
       },
-      "roles": ["Role 1", "Role 2"],
-      "tools": ["Tool 1", "Tool 2"]
+      "roles": ["Hiring Manager", "HR Specialist"],
+      "tools": ["HRIS", "Email", "ATS"]
     },
     "insights": [
       {
-        "id": "insight-1",
-        "title": "Sample Insight",
-        "description": "Description of the insight",
+        "id": "1",
+        "title": "Bottleneck Detected",
+        "description": "Step 4 takes 4 hours and has friction tags",
         "type": "delay",
         "severity": "high",
         "icon": "alert-triangle"
@@ -111,106 +231,51 @@ export function ProcessAnalysisOverrideModal({ isOpen, onClose, onSubmit }: Proc
     ],
     "aiOpportunities": [
       {
-        "id": "opp-1",
-        "title": "Sample Opportunity",
-        "description": "Description of the opportunity",
-        "targetStepId": "1",
-        "targetStepTitle": "Step Name",
-        "category": "classification",
+        "id": "auto-score-candidates",
+        "title": "Auto-score candidates",
+        "description": "Use AI to automatically score candidates",
+        "targetStepId": "4",
+        "targetStepTitle": "Screen Candidates",
+        "category": "analysis",
         "impact": "high",
-        "icon": "layers"
+        "icon": "layers",
+        "dataSource": {
+          "hasDataSource": true,
+          "traffic": "2.3k/day",
+          "volume": "High"
+        }
       }
     ]
   }
-}`
-
-  if (!isOpen) return null
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
-          <h2 className="text-xl font-semibold text-gray-900">Override Process Analysis Data</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <X className="h-5 w-5 text-gray-500" />
-          </button>
-        </div>
-
-        {/* Content - Scrollable */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
-            <div className="space-y-3">
-              <label htmlFor="json-input" className="block text-sm font-medium text-gray-900">
-                Process Analysis JSON
-              </label>
-              <textarea
-                id="json-input"
-                value={jsonInput}
-                onChange={(e) => {
-                  setJsonInput(e.target.value)
-                  setError("")
-                }}
-                placeholder={sampleJson}
-                className="w-full h-80 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 font-mono text-sm resize-none"
-              />
-            </div>
-
-            {error && (
-              <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-red-800">Validation Error</p>
-                  <p className="text-sm text-red-700 mt-1">{error}</p>
-                </div>
-              </div>
-            )}
-
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Expected Structure</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-gray-600">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">processAnalysis.meta</code>
-                    <span>Process metadata</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">processAnalysis.summary</code>
-                    <span>Metrics, roles, and tools</span>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">processAnalysis.insights</code>
-                    <span>AI-generated insights array</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <code className="bg-gray-200 px-2 py-1 rounded text-gray-800">processAnalysis.aiOpportunities</code>
-                    <span>AI opportunities array</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+}`}
+              className="flex-1 min-h-[300px] font-mono text-sm resize-none"
+            />
           </div>
+
+          {error && (
+            <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+              <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-red-700">{error}</div>
+            </div>
+          )}
+
+          {isValid && !error && jsonInput.trim() && (
+            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <div className="text-sm text-green-700">Valid process analysis data format</div>
+            </div>
+          )}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0 rounded-b-xl">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 transition-colors"
-          >
+        <div className="flex justify-end gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={handleClose}>
             Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!jsonInput.trim()}
-            className="px-4 py-2 text-sm font-medium text-white bg-violet-600 border border-transparent rounded-lg hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
+          </Button>
+          <Button onClick={handleSubmit} disabled={!isValid || !jsonInput.trim()}>
             Apply Changes
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

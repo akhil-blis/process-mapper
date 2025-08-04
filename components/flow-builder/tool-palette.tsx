@@ -7,6 +7,20 @@ type ToolPaletteProps = {
 }
 
 export function ToolPalette({ onExportClick, onAddNodeClick }: ToolPaletteProps) {
+  const handleExportClick = () => {
+    if (onExportClick) {
+      try {
+        onExportClick()
+      } catch (error) {
+        console.error("Export failed:", error)
+        alert("Export failed. Please try again.")
+      }
+    } else {
+      console.warn("No export handler provided")
+      alert("Export functionality not available")
+    }
+  }
+
   const paletteItems = [
     {
       id: "add-node",
@@ -22,7 +36,7 @@ export function ToolPalette({ onExportClick, onAddNodeClick }: ToolPaletteProps)
       icon: <Download className="h-4 w-4" />,
       baseClasses: "bg-indigo-50 text-indigo-600",
       hoverClasses: "hover:bg-indigo-100 hover:text-indigo-700",
-      onClick: onExportClick,
+      onClick: handleExportClick,
     },
   ]
 

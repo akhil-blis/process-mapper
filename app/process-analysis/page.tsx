@@ -23,10 +23,15 @@ import {
   Download,
   Database,
   AlertCircle,
+  Edit3,
+  Brain,
+  MessageSquare,
+  BarChart3,
+  Settings,
 } from "lucide-react"
 import { Logo } from "@/components/logo"
-import { AILoading } from "@/components/ai-loading"
 import { ProcessAnalysisOverrideModal } from "@/components/analysis/process-analysis-override-modal"
+import { AddOpportunityModal } from "@/components/analysis/add-opportunity-modal"
 
 // Updated types for the new JSON structure
 type ProcessAnalysisData = {
@@ -244,14 +249,11 @@ const sampleData: ProcessAnalysisData = {
 }
 
 export default function ProcessAnalysisPage() {
-  const [isLoading, setIsLoading] = useState(() => {
-    if (typeof window !== "undefined") {
-      return !sessionStorage.getItem("process-analysis-processed")
-    }
-    return true
-  })
+  // Remove loading state entirely - just render immediately
   const router = useRouter()
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false)
+  const [isAddOpportunityModalOpen, setIsAddOpportunityModalOpen] = useState(false)
+  const [editingOpportunity, setEditingOpportunity] = useState<any>(null)
   const [analysisData, setAnalysisData] = useState<ProcessAnalysisData>(sampleData)
 
   const formatDuration = (minutes: number) => {
@@ -291,8 +293,50 @@ export default function ProcessAnalysisPage() {
     console.log("Process analysis data updated:", newData)
   }
 
-  const getIconComponent = (iconName: string) => {
+  const handleAddOpportunity = (newOpportunity: any) => {
+    setAnalysisData((prevData) => ({
+      ...prevData,
+      processAnalysis: {
+        ...prevData.processAnalysis,
+        aiOpportunities: [...prevData.processAnalysis.aiOpportunities, newOpportunity],
+      },
+    }))
+    console.log("New AI opportunity added:", newOpportunity)
+  }
+
+  const handleEditOpportunity = (updatedOpportunity: any) => {
+    setAnalysisData((prevData) => ({
+      ...prevData,
+      processAnalysis: {
+        ...prevData.processAnalysis,
+        aiOpportunities: prevData.processAnalysis.aiOpportunities.map((opp) =>
+          opp.id === updatedOpportunity.id ? updatedOpportunity : opp,
+        ),
+      },
+    }))
+    console.log("AI opportunity updated:", updatedOpportunity)
+  }
+
+  const openEditModal = (opportunity: any) => {
+    setEditingOpportunity(opportunity)
+    setIsAddOpportunityModalOpen(true)
+  }
+
+  const closeOpportunityModal = () => {
+    setIsAddOpportunityModalOpen(false)
+    setEditingOpportunity(null)
+  }
+
+  const getIconComponent = (category: string) => {
     const iconMap: Record<string, React.ComponentType<any>> = {
+      classification: Layers,
+      decision: Brain,
+      summarization: FileText,
+      analysis: BarChart3,
+      communication: MessageSquare,
+      generation: FilePlus,
+      automation: Settings,
+      // Fallback for legacy icon names
       "alert-triangle": AlertTriangle,
       shuffle: Shuffle,
       zap: Zap,
@@ -305,7 +349,7 @@ export default function ProcessAnalysisPage() {
       mail: Mail,
     }
 
-    const IconComponent = iconMap[iconName] || AlertTriangle
+    const IconComponent = iconMap[category] || AlertTriangle
     return <IconComponent className="h-4 w-4" />
   }
 
@@ -393,305 +437,328 @@ export default function ProcessAnalysisPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {isLoading && (
-        <AILoading
-          title="Analyzing Your Process"
-          subtitle="Identifying bottlenecks and AI opportunities"
-          onComplete={() => {
-            setIsLoading(false)
-            if (typeof window !== "undefined") {
-              sessionStorage.setItem("process-analysis-processed", "true")
-            }
-          }}
-          duration={3500}
-        />
-      )}
-      {!isLoading && (
-        <>
-          {/* Top Navigation */}
-          <header className="sticky top-0 bg-white border-b border-gray-200 z-40">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex items-center justify-between h-16">
-                <div className="flex items-center">
-                  <button
-                    onClick={() => router.push("/")}
-                    className="flex-shrink-0 flex items-center hover:opacity-80 transition-opacity"
-                  >
-                    <Logo />
-                    <span className="ml-2.5 font-semibold text-gray-800 text-lg">Process Mapper</span>
-                  </button>
-                </div>
-                <div className="hidden md:block">
-                  <h2 className="text-lg font-medium text-gray-700">Process Analysis</h2>
-                </div>
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => setIsOverrideModalOpen(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors border border-gray-200"
-                  >
-                    <Code className="h-4 w-4" />
-                    Override Data
-                  </button>
-                  <div className="flex items-center gap-2 text-sm text-green-600">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span>Analysis complete</span>
-                  </div>
-                  <div className="ml-4 w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-semibold text-xs">
-                    JD
-                  </div>
-                </div>
+      {/* Top Navigation */}
+      <header className="sticky top-0 bg-white border-b border-gray-200 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <button
+                onClick={() => router.push("/")}
+                className="flex-shrink-0 flex items-center hover:opacity-80 transition-opacity"
+              >
+                <Logo />
+                <span className="ml-2.5 font-semibold text-gray-800 text-lg">Process Mapper</span>
+              </button>
+            </div>
+            <div className="hidden md:block">
+              <h2 className="text-lg font-medium text-gray-700">Process Analysis</h2>
+            </div>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setIsOverrideModalOpen(true)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors border border-gray-200"
+              >
+                <Code className="h-4 w-4" />
+                Override Data
+              </button>
+              <div className="flex items-center gap-2 text-sm text-green-600">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span>Analysis complete</span>
+              </div>
+              <div className="ml-4 w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 font-semibold text-xs">
+                JD
               </div>
             </div>
-          </header>
+          </div>
+        </div>
+      </header>
 
-          <main className="py-8">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-              {/* Process Summary Section */}
-              <section aria-labelledby="process-summary-title">
-                <div className="bg-white shadow-sm rounded-lg p-6 md:p-8">
-                  <div className="space-y-6">
-                    <div>
-                      <h2 className="text-2xl font-semibold text-gray-900 mb-4">Process Summary</h2>
-                      <p className="text-gray-600 mb-6">
-                        Overview of your {meta.processTitle} process structure and key metrics.
-                      </p>
+      <main className="py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          {/* Process Summary Section */}
+          <section aria-labelledby="process-summary-title">
+            <div className="bg-white shadow-sm rounded-lg p-6 md:p-8">
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-4">Process Summary</h2>
+                  <p className="text-gray-600 mb-6">
+                    Overview of your {meta.processTitle} process structure and key metrics.
+                  </p>
+                </div>
+
+                {/* Metrics Grid */}
+                <div
+                  className={`grid ${hasDataSources ? "grid-cols-1 md:grid-cols-3" : "grid-cols-2 md:grid-cols-4"} gap-4 mb-8`}
+                >
+                  <div className="bg-white rounded-lg border border-gray-200 p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Play className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-gray-900">{summary.metrics.stepCount}</div>
+                        <div className="text-sm text-gray-500">Steps</div>
+                      </div>
                     </div>
+                  </div>
 
-                    {/* Metrics Grid */}
-                    <div
-                      className={`grid ${hasDataSources ? "grid-cols-1 md:grid-cols-3" : "grid-cols-2 md:grid-cols-4"} gap-4 mb-8`}
-                    >
+                  <div className="bg-white rounded-lg border border-gray-200 p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center">
+                        <Users className="h-5 w-5 text-violet-600" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-gray-900">{summary.metrics.roleCount}</div>
+                        <div className="text-sm text-gray-500">Roles</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg border border-gray-200 p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                        <AlertTriangle className="h-5 w-5 text-red-600" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-gray-900">{summary.metrics.frictionCount}</div>
+                        <div className="text-sm text-gray-500">Friction Points</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg border border-gray-200 p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <Clock className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-gray-900">
+                          {formatDuration(summary.metrics.estimatedDurationMinutes)}
+                        </div>
+                        <div className="text-sm text-gray-500">Est. Duration</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {hasDataSources && (
+                    <>
                       <div className="bg-white rounded-lg border border-gray-200 p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <Play className="h-5 w-5 text-blue-600" />
+                          <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                            <Database className="h-5 w-5 text-indigo-600" />
                           </div>
                           <div>
-                            <div className="text-2xl font-bold text-gray-900">{summary.metrics.stepCount}</div>
-                            <div className="text-sm text-gray-500">Steps</div>
+                            <div className="text-2xl font-bold text-gray-900">1.2k</div>
+                            <div className="text-sm text-gray-500">Data Source Traffic</div>
                           </div>
                         </div>
                       </div>
 
                       <div className="bg-white rounded-lg border border-gray-200 p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center">
-                            <Users className="h-5 w-5 text-violet-600" />
+                          <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                            <AlertCircle className="h-5 w-5 text-orange-600" />
                           </div>
                           <div>
-                            <div className="text-2xl font-bold text-gray-900">{summary.metrics.roleCount}</div>
-                            <div className="text-sm text-gray-500">Roles</div>
+                            <div className="text-2xl font-bold text-gray-900">2.1%</div>
+                            <div className="text-sm text-gray-500">Error Rate</div>
                           </div>
                         </div>
                       </div>
+                    </>
+                  )}
+                </div>
 
-                      <div className="bg-white rounded-lg border border-gray-200 p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                            <AlertTriangle className="h-5 w-5 text-red-600" />
-                          </div>
-                          <div>
-                            <div className="text-2xl font-bold text-gray-900">{summary.metrics.frictionCount}</div>
-                            <div className="text-sm text-gray-500">Friction Points</div>
-                          </div>
+                {/* Process Details */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="font-semibold text-gray-900 mb-4">Roles Involved</h3>
+                    <div className="space-y-2">
+                      {summary.roles.map((role) => (
+                        <div key={role} className="flex items-center gap-3">
+                          <div className="w-2 h-2 bg-violet-400 rounded-full"></div>
+                          <span className="text-sm text-gray-700">{role}</span>
                         </div>
-                      </div>
+                      ))}
+                    </div>
+                  </div>
 
-                      <div className="bg-white rounded-lg border border-gray-200 p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                            <Clock className="h-5 w-5 text-green-600" />
-                          </div>
-                          <div>
-                            <div className="text-2xl font-bold text-gray-900">
-                              {formatDuration(summary.metrics.estimatedDurationMinutes)}
-                            </div>
-                            <div className="text-sm text-gray-500">Est. Duration</div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {hasDataSources && (
-                        <>
-                          <div className="bg-white rounded-lg border border-gray-200 p-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                                <Database className="h-5 w-5 text-indigo-600" />
-                              </div>
-                              <div>
-                                <div className="text-2xl font-bold text-gray-900">1.2k</div>
-                                <div className="text-sm text-gray-500">Data Source Traffic</div>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="bg-white rounded-lg border border-gray-200 p-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                                <AlertCircle className="h-5 w-5 text-orange-600" />
-                              </div>
-                              <div>
-                                <div className="text-2xl font-bold text-gray-900">2.1%</div>
-                                <div className="text-sm text-gray-500">Error Rate</div>
-                              </div>
-                            </div>
-                          </div>
-                        </>
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="font-semibold text-gray-900 mb-4">Tools & Systems</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {summary.tools.slice(0, 8).map((tool) => (
+                        <span key={tool} className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-sm">
+                          {tool}
+                        </span>
+                      ))}
+                      {summary.tools.length > 8 && (
+                        <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-md text-sm">
+                          +{summary.tools.length - 8} more
+                        </span>
                       )}
-                    </div>
-
-                    {/* Process Details */}
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="bg-white rounded-lg border border-gray-200 p-6">
-                        <h3 className="font-semibold text-gray-900 mb-4">Roles Involved</h3>
-                        <div className="space-y-2">
-                          {summary.roles.map((role) => (
-                            <div key={role} className="flex items-center gap-3">
-                              <div className="w-2 h-2 bg-violet-400 rounded-full"></div>
-                              <span className="text-sm text-gray-700">{role}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="bg-white rounded-lg border border-gray-200 p-6">
-                        <h3 className="font-semibold text-gray-900 mb-4">Tools & Systems</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {summary.tools.slice(0, 8).map((tool) => (
-                            <span key={tool} className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-sm">
-                              {tool}
-                            </span>
-                          ))}
-                          {summary.tools.length > 8 && (
-                            <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-md text-sm">
-                              +{summary.tools.length - 8} more
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* AI Insights */}
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-4">AI-Generated Insights</h3>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        {insights.map((insight) => (
-                          <div key={insight.id} className={`rounded-lg border p-4 ${severityColors[insight.severity]}`}>
-                            <div className="flex items-start gap-3">
-                              <div className="flex-shrink-0 mt-0.5">{getIconComponent(insight.icon)}</div>
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-medium mb-1">{insight.title}</h4>
-                                <p className="text-sm opacity-90">{insight.description}</p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
                     </div>
                   </div>
                 </div>
-              </section>
 
-              {/* AI Opportunities Section */}
-              <section aria-labelledby="ai-opportunities-title">
-                <div className="bg-white shadow-sm rounded-lg p-6 md:p-8">
-                  <div className="mb-6">
-                    <h2 className="text-2xl font-semibold text-gray-900 mb-2">AI Opportunities</h2>
-                    <p className="text-gray-600">
-                      AI-powered suggestions to optimize your process and reduce manual work. Click any card to view
-                      detailed analysis.
-                    </p>
-                  </div>
-
-                  {/* Compact Grid Layout */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {aiOpportunities.map((opportunity) => (
-                      <div
-                        key={opportunity.id}
-                        onClick={() => router.push("/opportunity/auto-score-candidates")}
-                        className={`group relative ${impactColors[opportunity.impact]} border rounded-lg p-4 hover:shadow-md transition-all duration-200 cursor-pointer hover:border-gray-300`}
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center ${getIconColor(opportunity.impact)}`}
-                          >
-                            <div className="text-white">{getIconComponent(opportunity.icon)}</div>
+                {/* AI Insights */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-4">AI-Generated Insights</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {insights.map((insight) => (
+                      <div key={insight.id} className={`rounded-lg border p-4 ${severityColors[insight.severity]}`}>
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0 mt-0.5">{getIconComponent(insight.icon)}</div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium mb-1">{insight.title}</h4>
+                            <p className="text-sm opacity-90">{insight.description}</p>
                           </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleExportOpportunity(opportunity)
-                            }}
-                            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
-                            title="Export opportunity context"
-                          >
-                            <Download className="h-4 w-4" />
-                          </button>
-                        </div>
-                        <h3 className="font-semibold text-gray-900 mb-2">{opportunity.title}</h3>
-                        <p className="text-sm text-gray-600 mb-3">{opportunity.description}</p>
-                        <div className="flex items-center gap-2 mb-3">
-                          <span
-                            className={`text-xs font-medium px-2 py-1 rounded ${
-                              opportunity.impact === "high"
-                                ? "text-green-800 bg-green-200"
-                                : opportunity.impact === "medium"
-                                  ? "text-yellow-800 bg-yellow-200"
-                                  : "text-red-800 bg-red-200"
-                            }`}
-                          >
-                            {opportunity.impact.charAt(0).toUpperCase() + opportunity.impact.slice(1)} Impact
-                          </span>
-                          {opportunity.dataSource?.hasDataSource && (
-                            <div className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded bg-blue-100 text-blue-800">
-                              <Database className="h-3 w-3" />
-                              <span>{opportunity.dataSource.traffic}</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-500">{opportunity.targetStepTitle}</span>
-                          <svg
-                            className="w-4 h-4 text-gray-400 group-hover:text-violet-600 transition-colors"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
-              </section>
-            </div>
-          </main>
-
-          {/* Footer Navigation */}
-          <footer className="sticky bottom-0 bg-violet-600 border-t border-violet-700 py-4 shadow-lg z-30">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-              <button
-                onClick={() => router.push("/builder")}
-                className="text-sm text-violet-100 hover:text-white hover:bg-violet-700 transition-colors flex items-center gap-2 px-3 py-2 rounded-md"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Flow Builder
-              </button>
-              <div className="flex items-center gap-4">
-                <div className="text-xs text-violet-200 font-mono hidden sm:block">
-                  {aiOpportunities.length} AI opportunities identified
-                </div>
               </div>
             </div>
-          </footer>
-          <ProcessAnalysisOverrideModal
-            isOpen={isOverrideModalOpen}
-            onClose={() => setIsOverrideModalOpen(false)}
-            onSubmit={handleProcessAnalysisOverride}
-          />
-        </>
-      )}
+          </section>
+
+          {/* AI Opportunities Section */}
+          <section aria-labelledby="ai-opportunities-title">
+            <div className="bg-white shadow-sm rounded-lg p-6 md:p-8">
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold text-gray-900 mb-2">AI Opportunities</h2>
+                <p className="text-gray-600">
+                  AI-powered suggestions to optimize your process and reduce manual work. Click any card to view
+                  detailed analysis.
+                </p>
+              </div>
+
+              {/* Compact Grid Layout */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                {aiOpportunities.map((opportunity) => (
+                  <div
+                    key={opportunity.id}
+                    className={`group relative ${impactColors[opportunity.impact]} border rounded-lg p-4 hover:shadow-md transition-all duration-200`}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center ${getIconColor(opportunity.impact)}`}
+                      >
+                        <div className="text-white">{getIconComponent(opportunity.category)}</div>
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openEditModal(opportunity)
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-md transition-colors"
+                          title="Edit opportunity"
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleExportOpportunity(opportunity)
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-md transition-colors"
+                          title="Export opportunity context"
+                        >
+                          <Download className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div onClick={() => router.push("/opportunity/auto-score-candidates")} className="cursor-pointer">
+                      <h3 className="font-semibold text-gray-900 mb-2">{opportunity.title}</h3>
+                      <p className="text-sm text-gray-600 mb-3">{opportunity.description}</p>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span
+                          className={`text-xs font-medium px-2 py-1 rounded ${
+                            opportunity.impact === "high"
+                              ? "text-green-800 bg-green-200"
+                              : opportunity.impact === "medium"
+                                ? "text-yellow-800 bg-yellow-200"
+                                : "text-red-800 bg-red-200"
+                          }`}
+                        >
+                          {opportunity.impact.charAt(0).toUpperCase() + opportunity.impact.slice(1)} Impact
+                        </span>
+                        {opportunity.dataSource?.hasDataSource && (
+                          <div className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded bg-blue-100 text-blue-800">
+                            <Database className="h-3 w-3" />
+                            <span>{opportunity.dataSource.traffic}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">{opportunity.targetStepTitle}</span>
+                        <svg
+                          className="w-4 h-4 text-gray-400 group-hover:text-violet-600 transition-colors"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add Opportunity Button - Bottom Right */}
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setIsAddOpportunityModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
+                >
+                  <FilePlus className="h-4 w-4" />
+                  Add Opportunity
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      {/* Footer Navigation */}
+      <footer className="sticky bottom-0 bg-violet-600 border-t border-violet-700 py-4 shadow-lg z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+          <button
+            onClick={() => router.push("/builder")}
+            className="text-sm text-violet-100 hover:text-white hover:bg-violet-700 transition-colors flex items-center gap-2 px-3 py-2 rounded-md"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Flow Builder
+          </button>
+          <div className="flex items-center gap-4">
+            <div className="text-xs text-violet-200 font-mono hidden sm:block">
+              {aiOpportunities.length} AI opportunities identified
+            </div>
+          </div>
+        </div>
+      </footer>
+      <ProcessAnalysisOverrideModal
+        isOpen={isOverrideModalOpen}
+        onClose={() => setIsOverrideModalOpen(false)}
+        onSubmit={handleProcessAnalysisOverride}
+      />
+      <AddOpportunityModal
+        isOpen={isAddOpportunityModalOpen}
+        onClose={closeOpportunityModal}
+        onSubmit={editingOpportunity ? handleEditOpportunity : handleAddOpportunity}
+        editingOpportunity={editingOpportunity}
+        availableSteps={[
+          { id: "1", title: "Post Job Opening" },
+          { id: "2", title: "Source Candidates" },
+          { id: "3", title: "Application Review" },
+          { id: "4", title: "Screen Candidates" },
+          { id: "5", title: "Interview Rounds" },
+          { id: "6", title: "Make Offer" },
+          { id: "7", title: "Set Up IT Access" },
+          { id: "8", title: "Welcome Session" },
+        ]}
+      />
     </div>
   )
 }

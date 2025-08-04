@@ -1,156 +1,218 @@
 "use client"
 
-import type { FlowData } from "@/types/flow"
-import type { AIOpportunity } from "@/types/prototype"
-import { Zap, FileText, BarChart, Sparkles, ArrowRight } from "lucide-react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { ArrowRight, Download, Zap, Clock, Users, TrendingUp } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 
-type AIOpportunitiesProps = {
-  flowData: FlowData
+type Opportunity = {
+  id: string
+  title: string
+  description: string
+  impact: "High" | "Medium" | "Low"
+  effort: "Low" | "Medium" | "High"
+  category: "automation" | "optimization" | "intelligence"
+  estimatedSavings: string
+  timeToImplement: string
+  rolesAffected: string[]
 }
 
-export function AIOpportunities({ flowData }: AIOpportunitiesProps) {
+const opportunities: Opportunity[] = [
+  {
+    id: "auto-score-candidates",
+    title: "Auto-score candidates",
+    description:
+      "AI-powered resume screening and candidate ranking based on job requirements and historical hiring data.",
+    impact: "High",
+    effort: "Medium",
+    category: "automation",
+    estimatedSavings: "~3 hours per batch",
+    timeToImplement: "2-3 weeks",
+    rolesAffected: ["HR Specialist", "Hiring Manager"],
+  },
+  {
+    id: "smart-interview-scheduling",
+    title: "Smart interview scheduling",
+    description:
+      "Automated coordination of interview panels with conflict detection and optimal time slot suggestions.",
+    impact: "Medium",
+    effort: "Low",
+    category: "optimization",
+    estimatedSavings: "~2 hours per week",
+    timeToImplement: "1-2 weeks",
+    rolesAffected: ["Recruiting Coordinator"],
+  },
+  {
+    id: "predictive-offer-acceptance",
+    title: "Predictive offer acceptance",
+    description: "ML model to predict candidate acceptance likelihood and suggest optimal offer packages.",
+    impact: "High",
+    effort: "High",
+    category: "intelligence",
+    estimatedSavings: "~15% faster closes",
+    timeToImplement: "4-6 weeks",
+    rolesAffected: ["HR Business Partner", "Hiring Manager"],
+  },
+]
+
+export function AIOpportunities() {
   const router = useRouter()
-  // Sample AI opportunities - in a real app these would be generated based on the actual flow
-  const opportunities: AIOpportunity[] = [
-    {
-      id: "1",
-      title: "Auto-score candidates",
-      description: `With ${
-        flowData.nodes
-          .find((n) => n.id === "step-3a")
-          ?.simulatedSources?.reduce((sum, s) => sum + s.volume, 0)
-          ?.toLocaleString() || "18,200"
-      } applications/month and ${((flowData.nodes.find((n) => n.id === "step-3a")?.simulatedSources?.reduce((max, s) => Math.max(max, s.errorRate), 0) || 0.12) * 100).toFixed(1)}% error rate, AI scoring could reduce manual screening time by 70% and improve consistency`,
-      stepId: "step-3a",
-      stepTitle: "Inbound Applications Review",
-      category: "analysis",
-      impact: "high",
-    },
-    {
-      id: "2",
-      title: "Smart interview scheduling",
-      description: `Calendar API shows ${flowData.nodes.find((n) => n.id === "step-5")?.simulatedSources?.[0]?.volume?.toLocaleString() || "4,500"} scheduling requests/month with ${((flowData.nodes.find((n) => n.id === "step-5")?.simulatedSources?.[0]?.errorRate || 0.15) * 100).toFixed(1)}% failure rate - AI can optimize scheduling and reduce conflicts`,
-      stepId: "step-5",
-      stepTitle: "Schedule Interview Loop",
-      category: "automation",
-      impact: "high",
-    },
-    {
-      id: "3",
-      title: "Referral quality scoring",
-      description: `Employee referral system processes ${flowData.nodes.find((n) => n.id === "step-3b")?.simulatedSources?.[0]?.volume?.toLocaleString() || "1,200"} referrals/month - AI can score referral quality and prioritize high-potential candidates`,
-      stepId: "step-3b",
-      stepTitle: "Referrals Review",
-      category: "analysis",
-      impact: "medium",
-    },
-    {
-      id: "4",
-      title: "Multi-source application deduplication",
-      description: `With ${flowData.nodes.filter((n) => n.simulatedSources && n.simulatedSources.length > 0).length} different data sources feeding applications, AI can detect and merge duplicate candidates across platforms`,
-      stepId: "step-2",
-      stepTitle: "Distribute Job Posting",
-      category: "automation",
-      impact: "medium",
-    },
-    {
-      id: "5",
-      title: "Predictive headcount planning",
-      description: `Workday API shows ${flowData.nodes.find((n) => n.id === "start-1")?.simulatedSources?.[0]?.volume?.toLocaleString() || "2,400"} headcount requests/year - AI can predict hiring needs and pre-populate job descriptions`,
-      stepId: "start-1",
-      stepTitle: "Headcount Approved",
-      category: "generation",
-      impact: "low",
-    },
-  ]
+  const [isExporting, setIsExporting] = useState(false)
 
-  const categoryIcons = {
-    automation: <Zap className="h-4 w-4" />,
-    summarization: <FileText className="h-4 w-4" />,
-    generation: <Sparkles className="h-4 w-4" />,
-    analysis: <BarChart className="h-4 w-4" />,
+  const getImpactColor = (impact: string) => {
+    switch (impact) {
+      case "High":
+        return "bg-red-100 text-red-800 border-red-200"
+      case "Medium":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200"
+      case "Low":
+        return "bg-green-100 text-green-800 border-green-200"
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200"
+    }
   }
 
-  const categoryColors = {
-    automation: "bg-green-100 text-green-600",
-    summarization: "bg-blue-100 text-blue-600",
-    generation: "bg-purple-100 text-purple-600",
-    analysis: "bg-orange-100 text-orange-600",
+  const getEffortColor = (effort: string) => {
+    switch (effort) {
+      case "High":
+        return "bg-red-100 text-red-800 border-red-200"
+      case "Medium":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200"
+      case "Low":
+        return "bg-green-100 text-green-800 border-green-200"
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200"
+    }
   }
 
-  const impactColors = {
-    high: "border-l-red-500",
-    medium: "border-l-yellow-500",
-    low: "border-l-blue-500",
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case "automation":
+        return <Zap className="h-4 w-4" />
+      case "optimization":
+        return <TrendingUp className="h-4 w-4" />
+      case "intelligence":
+        return <Users className="h-4 w-4" />
+      default:
+        return <Clock className="h-4 w-4" />
+    }
+  }
+
+  const handleExportOpportunities = async () => {
+    setIsExporting(true)
+    try {
+      // Create export data
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        processName: "Hiring Process - Mid-Level Role",
+        opportunities: opportunities.map((opp) => ({
+          ...opp,
+          detailsUrl: `${window.location.origin}/opportunity/${opp.id}`,
+        })),
+      }
+
+      // Create and download JSON file
+      const jsonData = JSON.stringify(exportData, null, 2)
+      const blob = new Blob([jsonData], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
+
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-")
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `ai_opportunities_${timestamp}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      console.log("AI opportunities exported successfully")
+    } catch (error) {
+      console.error("Export failed:", error)
+      alert("Export failed. Please try again.")
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold text-gray-900 mb-4">AI Opportunities</h2>
-        <p className="text-gray-600 mb-6">AI-powered suggestions to optimize your process and reduce manual work.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-900">AI Opportunities</h2>
+          <p className="text-gray-600 mt-1">Suggested automation and optimization opportunities for your process</p>
+        </div>
+        <Button
+          onClick={handleExportOpportunities}
+          disabled={isExporting}
+          variant="outline"
+          className="flex items-center gap-2 bg-transparent"
+        >
+          <Download className="h-4 w-4" />
+          {isExporting ? "Exporting..." : "Export All"}
+        </Button>
       </div>
 
-      <div className="space-y-4">
+      <div className="grid gap-6">
         {opportunities.map((opportunity) => (
-          <div
-            key={opportunity.id}
-            onClick={() => router.push("/opportunity/auto-score-candidates")}
-            className={`bg-white rounded-lg border border-gray-200 border-l-4 ${impactColors[opportunity.impact]} p-6 hover:shadow-md transition-shadow cursor-pointer`}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-3">
-                  <div
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center ${categoryColors[opportunity.category]}`}
-                  >
-                    {categoryIcons[opportunity.category]}
-                  </div>
+          <Card key={opportunity.id} className="hover:shadow-md transition-shadow">
+            <CardHeader className="pb-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-violet-100 rounded-lg">{getCategoryIcon(opportunity.category)}</div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">{opportunity.title}</h3>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <span>Step: {opportunity.stepTitle}</span>
-                      <span>•</span>
-                      <span className="capitalize">{opportunity.category}</span>
-                      <span>•</span>
-                      <span
-                        className={`capitalize font-medium ${
-                          opportunity.impact === "high"
-                            ? "text-red-600"
-                            : opportunity.impact === "medium"
-                              ? "text-yellow-600"
-                              : "text-blue-600"
-                        }`}
-                      >
-                        {opportunity.impact} impact
-                      </span>
-                    </div>
+                    <CardTitle className="text-lg">{opportunity.title}</CardTitle>
+                    <p className="text-sm text-gray-600 mt-1">{opportunity.description}</p>
                   </div>
                 </div>
-                <p className="text-gray-700 mb-4">{opportunity.description}</p>
+                <Button
+                  onClick={() => router.push(`/opportunity/${opportunity.id}`)}
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center gap-1 text-violet-600 hover:text-violet-700"
+                >
+                  View Details
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
               </div>
-              <div className="flex-shrink-0 ml-4 p-2 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-md transition-colors">
-                <ArrowRight className="h-4 w-4" />
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Impact</p>
+                  <Badge variant="outline" className={getImpactColor(opportunity.impact)}>
+                    {opportunity.impact}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Effort</p>
+                  <Badge variant="outline" className={getEffortColor(opportunity.effort)}>
+                    {opportunity.effort}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Estimated Savings</p>
+                  <p className="text-sm font-medium text-gray-900">{opportunity.estimatedSavings}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Time to Implement</p>
+                  <p className="text-sm font-medium text-gray-900">{opportunity.timeToImplement}</p>
+                </div>
               </div>
-            </div>
-          </div>
+              <div className="mt-4">
+                <p className="text-xs font-medium text-gray-500 mb-2">Roles Affected</p>
+                <div className="flex flex-wrap gap-2">
+                  {opportunity.rolesAffected.map((role) => (
+                    <Badge key={role} variant="secondary" className="text-xs">
+                      {role}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         ))}
-      </div>
-
-      <div className="bg-violet-50 rounded-lg p-6 border border-violet-200">
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Sparkles className="h-4 w-4 text-violet-600" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-violet-900 mb-2">Ready to prototype?</h3>
-            <p className="text-violet-700 text-sm">
-              These AI opportunities can be built into your prototype to demonstrate value and gather feedback before
-              full implementation.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   )

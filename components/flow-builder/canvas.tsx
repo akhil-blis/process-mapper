@@ -5,7 +5,8 @@ import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHand
 import type { FlowNode, FlowEdge } from "@/types/flow"
 import { FlowNodeComponent } from "./flow-node"
 import { FloatingPanel } from "./floating-panel"
-import { nanoid } from "nanoid"
+// Simple ID generator to replace nanoid
+const generateId = () => `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
 type CanvasProps = {
   nodes: FlowNode[]
@@ -61,7 +62,6 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
     const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
     const [highlightedCell, setHighlightedCell] = useState<{ row: number; column: number } | null>(null)
     const [showFloatingPanel, setShowFloatingPanel] = useState(false)
-    const [hasInitiallyFitted, setHasInitiallyFitted] = useState(false)
 
     // New state for placement mode
     const [isPlacingNewNode, setIsPlacingNewNode] = useState(false)
@@ -650,7 +650,7 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
             if (isPlacingNewNode && highlightedCell && onNodeAdd) {
               // Place new node
               const newNode: FlowNode = {
-                id: `node-${nanoid()}`,
+                id: generateId(), // Changed from `node-${nanoid()}`
                 type: "step",
                 title: "New Step",
                 position: { row: highlightedCell.row, column: highlightedCell.column },
@@ -835,10 +835,10 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
       }
     }, [handleWheel, handleMouseMove, handleMouseUp])
 
-    // Fit to frame ONLY on initial load, not on every node change
+    // Fit to frame immediately when nodes are available - no delays
     useEffect(() => {
       const fitToFrame = () => {
-        if (nodes.length === 0 || hasInitiallyFitted) return
+        if (nodes.length === 0 || !canvasRef.current) return
 
         const maxCol = Math.max(...nodes.map((node) => node.position.column))
         const maxRow = Math.max(...nodes.map((node) => node.position.row))
@@ -849,34 +849,32 @@ export const Canvas = forwardRef<CanvasRef, CanvasProps>(
         const contentWidth = (maxCol - minCol + 1) * NODE_WIDTH + (maxCol - minCol) * GRID_COL_GAP
         const contentHeight = (maxRow - minRow + 1) * NODE_HEIGHT + (maxRow - minRow) * GRID_ROW_GAP
 
-        if (canvasRef.current) {
-          const containerWidth = canvasRef.current.clientWidth
-          const containerHeight = canvasRef.current.clientHeight
+        const containerWidth = canvasRef.current.clientWidth
+        const containerHeight = canvasRef.current.clientHeight
 
-          // Add more generous padding for better visual spacing
-          const paddingX = 100
-          const paddingY = 100
+        // Add more generous padding for better visual spacing
+        const paddingX = 100
+        const paddingY = 100
 
-          // Calculate scale to fit content with padding
-          const scaleX = (containerWidth - paddingX * 2) / contentWidth
-          const scaleY = (containerHeight - paddingY * 2) / contentHeight
-          const scale = Math.min(1, Math.min(scaleX, scaleY)) // Don't zoom in beyond 100%
+        // Calculate scale to fit content with padding
+        const scaleX = (containerWidth - paddingX * 2) / contentWidth
+        const scaleY = (containerHeight - paddingY * 2) / contentHeight
+        const scale = Math.min(1, Math.min(scaleX, scaleY)) // Don't zoom in beyond 100%
 
-          // Calculate the center of the content area (accounting for offset coordinates)
-          const contentCenterX = CANVAS_PADDING_X + ((minCol + maxCol) * GRID_X_SPACING) / 2
-          const contentCenterY = CANVAS_PADDING_Y + ((minRow + maxRow) * GRID_Y_SPACING) / 2
+        // Calculate the center of the content area (accounting for offset coordinates)
+        const contentCenterX = CANVAS_PADDING_X + ((minCol + maxCol) * GRID_X_SPACING) / 2
+        const contentCenterY = CANVAS_PADDING_Y + ((minRow + maxRow) * GRID_Y_SPACING) / 2
 
-          // Calculate transform to center the content
-          const x = containerWidth / 2 - contentCenterX * scale
-          const y = containerHeight / 2 - contentCenterY * scale
+        // Calculate transform to center the content
+        const x = containerWidth / 2 - contentCenterX * scale
+        const y = containerHeight / 2 - contentCenterY * scale
 
-          setTransform({ x, y, scale })
-        }
+        setTransform({ x, y, scale })
       }
 
+      // Fit immediately when nodes change
       fitToFrame()
-      setHasInitiallyFitted(true)
-    }, [nodes.length, hasInitiallyFitted]) // Only depend on nodes.length, not the full nodes array
+    }, [nodes.length, minRow, minCol])
 
     // Handle keyboard events for connection editing and deletion
     useEffect(() => {
