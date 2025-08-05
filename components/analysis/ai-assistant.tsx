@@ -50,12 +50,12 @@ export function AIAssistant({ onSuggestion, onToggle }: AIAssistantProps) {
     setResponse("")
 
     setTimeout(() => {
-      // Always add the evaluator dashboard regardless of user input
+      // Always add the candidate feedback page regardless of user input
       const confirmationResponse =
-        "I've added an 'Evaluator Dashboard' screen that helps HR reviewers sort candidates by AI-assigned scores, review edge cases, and leave final comments. This supports human-in-the-loop decision making."
+        "I've added a 'Candidate Feedback' screen that allows HR reviewers to collect structured feedback on approved candidates, schedule interviews, and send personalized rejection notifications. This completes the candidate evaluation workflow."
 
       setResponse(confirmationResponse)
-      onSuggestion("add_evaluator_dashboard") // Send a specific action identifier
+      onSuggestion("add_candidate_feedback") // Send a specific action identifier
       setIsProcessing(false)
       setPrompt("") // Clear the prompt after submission
     }, 1500)
@@ -69,10 +69,10 @@ export function AIAssistant({ onSuggestion, onToggle }: AIAssistantProps) {
   }
 
   const quickSuggestions = [
-    "Add evaluator dashboard for HR reviewer",
-    "Include candidate comparison view",
-    "Add scoring feedback collection",
-    "Create batch processing screen",
+    "Add candidate feedback collection page",
+    "Include interview scheduling screen",
+    "Add candidate comparison view",
+    "Create rejection notification screen",
   ]
 
   return (

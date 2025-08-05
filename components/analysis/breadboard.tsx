@@ -9,7 +9,7 @@ import type {
   PrototypeConnection,
   ElementType,
 } from "@/types/prototype"
-import { Plus, X, Info, MousePointer, FormInput, Trash2 } from "lucide-react"
+import { Plus, X, Info, MousePointer, FormInput, Trash2, Download } from "lucide-react"
 import { AIAssistant } from "./ai-assistant" // Import the AI Assistant
 
 // --- ADJUSTED LAYOUT CONSTANTS for a more compact design ---
@@ -430,6 +430,18 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
     return { x: (x1 + x2) / 2, y: (y1 + y2) / 2 }
   }
 
+  const exportToJSON = () => {
+    const dataStr = JSON.stringify(currentPlan, null, 2)
+    const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr)
+
+    const exportFileDefaultName = "prototype-plan.json"
+
+    const linkElement = document.createElement("a")
+    linkElement.setAttribute("href", dataUri)
+    linkElement.setAttribute("download", exportFileDefaultName)
+    linkElement.click()
+  }
+
   const screensToRender = getScreensWithCalculatedPositions()
 
   const handleAISuggestion = (suggestion: string) => {
@@ -595,12 +607,20 @@ export function Breadboard({ prototypePlan, onUpdate, onAISuggestion }: Breadboa
           </h2>
           <p className="text-gray-600 text-sm">Design your prototype structure using the breadboard interface below.</p>
         </div>
-        <button
-          onClick={addScreen}
-          className="flex items-center gap-2 px-3.5 py-2 bg-violet-600 text-white rounded-md hover:bg-violet-700 transition-colors text-sm"
-        >
-          <Plus className="h-4 w-4" /> Add Screen
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportToJSON}
+            className="flex items-center gap-2 px-3.5 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
+          >
+            <Download className="h-4 w-4" /> Export JSON
+          </button>
+          <button
+            onClick={addScreen}
+            className="flex items-center gap-2 px-3.5 py-2 bg-violet-600 text-white rounded-md hover:bg-violet-700 transition-colors text-sm"
+          >
+            <Plus className="h-4 w-4" /> Add Screen
+          </button>
+        </div>
       </div>
       {connectingFromElement && (
         <div className="mb-4 bg-violet-50 border border-violet-200 rounded-md p-3 text-sm text-violet-700">
