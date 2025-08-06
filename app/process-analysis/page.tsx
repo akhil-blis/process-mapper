@@ -255,7 +255,24 @@ export default function ProcessAnalysisPage() {
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false)
   const [isAddOpportunityModalOpen, setIsAddOpportunityModalOpen] = useState(false)
   const [editingOpportunity, setEditingOpportunity] = useState<any>(null)
-  const [analysisData, setAnalysisData] = useState<ProcessAnalysisData>(sampleData)
+  const [analysisData, setAnalysisData] = useState<ProcessAnalysisData>(() => {
+    // Check if we have analysis data from the API call
+    if (typeof window !== "undefined") {
+      const storedData = sessionStorage.getItem("processAnalysisData")
+      if (storedData) {
+        try {
+          const parsedData = JSON.parse(storedData)
+          // Clear the stored data after using it
+          sessionStorage.removeItem("processAnalysisData")
+          return parsedData
+        } catch (error) {
+          console.error("Error parsing stored analysis data:", error)
+        }
+      }
+    }
+    // Fallback to sample data
+    return sampleData
+  })
 
   const formatDuration = (minutes: number) => {
     if (minutes < 60) return `${minutes}m`
