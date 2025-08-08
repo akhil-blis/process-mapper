@@ -1,7 +1,7 @@
 import type React from "react"
 import "./globals.css"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Inter } from 'next/font/google'
 import { ThemeProvider } from "@/components/theme-provider"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -19,7 +19,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-white`}>
+      <body className={`${inter.className} bg-app`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
           {children}
         </ThemeProvider>
