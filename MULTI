@@ -1,81 +1,76 @@
-// app/page.tsx
-import { UserMenu } from "@/components/shared/user-menu"
+//* app/globals.css */
+@layer utilities {
+  /* Semantic backgrounds */
+  .bg-app { background-color: var(--bg); }
+  .bg-surface { background-color: var(--surface); }
+  .bg-subtle { background-color: var(--muted); }
 
-const Page = () => {
-  return (
-    <div className="flex items-center">
-      <UserMenu />
-    </div>
-  )
+  /* Semantic text */
+  .text-foreground { color: var(--foreground); }
+  .text-secondary { color: var(--muted-foreground); }
+  .text-muted { color: var(--muted-foreground); }
+  .text-inverse { color: var(--primary-foreground); }
+
+  /* Semantic borders and rings */
+  .border-default { border-color: var(--border); }
+  .ring-brand { --tw-ring-color: hsl(var(--ring)); }
+
+  /* Brand helpers */
+  .bg-brand { background-color: hsl(var(--primary)); }
+  .text-brand { color: hsl(var(--primary)); }
+  .bg-brand-50 { background-color: hsl(var(--accent)); } /* light brand accent */
+
+  /* Success/Info/Warning/Danger text helpers */
+  .text-success-600 { color: #16a34a; }
+  .text-info-600 { color: #2563eb; }
+
+  /* Safe remaps to tokens so legacy classes pick up centralized tokens */
+  .bg-white { background-color: hsl(var(--card)) !important; }
+  .bg-gray-50 { background-color: hsl(var(--background)) !important; }
+  .bg-gray-100 { background-color: hsl(var(--muted)) !important; }
+
+  .border-gray-200 { border-color: hsl(var(--border)) !important; }
+
+  .text-gray-900 { color: hsl(var(--foreground)) !important; }
+  .text-gray-800 { color: hsl(var(--foreground)) !important; }
+  .text-gray-700 { color: hsl(var(--muted-foreground)) !important; }
+  .text-gray-600 { color: hsl(var(--muted-foreground)) !important; }
+  .text-gray-500 { color: hsl(var(--muted-foreground)) !important; }
+
+  .bg-violet-600 { background-color: hsl(var(--primary)) !important; }
+  .hover\:bg-violet-700:hover { background-color: hsl(var(--primary)) !important; opacity: 0.9; }
+  .bg-violet-100 { background-color: hsl(var(--accent)) !important; }
+  .text-violet-600 { color: hsl(var(--primary)) !important; }
+  .text-violet-700 { color: hsl(var(--primary)) !important; }
+  .text-violet-100 { color: hsl(var(--primary-foreground)) !important; }
+
+  /* Map ring helpers to brand */
+  .focus-within\:ring-violet-100:focus-within { --tw-ring-color: hsl(var(--accent)) !important; }
+  .focus-within\:ring-violet-500:focus-within { --tw-ring-color: hsl(var(--ring)) !important; }
+  .ring-violet-100 { --tw-ring-color: hsl(var(--accent)) !important; }
+  .ring-violet-500 { --tw-ring-color: hsl(var(--ring)) !important; }
 }
 
-export default Page
+/* app/layout.tsx */
+<body className={`${inter.className} bg-app`}>
 
-// components/flow-builder/footer-summary.tsx
-import { buildLocalProcessAnalysis } from "@/data/local-analysis"
-import { useRouter } from "next/router"
-import { useState } from "react"
+/* app/page.tsx */
+<div className="min-h-screen bg-app">
+<header className="fixed top-0 left-0 right-0 bg-surface border-b border-default z-50">
 
-const FooterSummary = ({ flowData }) => {
-  const router = useRouter()
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
+/* app/docs/page.tsx */
+<div className="min-h-screen bg-app">
+<header className="sticky top-0 bg-surface border-b border-default z-40">
 
-  const handleAnalyzeProcess = () => {
-    setIsAnalyzing(true)
-    const apiEnabled = typeof window !== "undefined" && localStorage.getItem("process-mapper:api-data-enabled") === "true";
-    if (!apiEnabled) {
-      const localResult = buildLocalProcessAnalysis(flowData);
-      sessionStorage.setItem("processAnalysisData", JSON.stringify(localResult));
-      router.push("/process-analysis");
-      setIsAnalyzing(false);
-      return;
-    }
+/* app/prototype-handover/[id]/page.tsx */
+<div className="min-h-screen bg-app">
+<header className="sticky top-0 bg-surface border-b border-default z-40">
 
-    fetch("/api/analyze-process", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(flowData),
-    })
-    .then(response => response.json())
-    .then(data => {
-      sessionStorage.setItem("processAnalysisData", JSON.stringify(data));
-      router.push("/process-analysis");
-    })
-    .catch(error => {
-      console.error("Error analyzing process:", error);
-    })
-    .finally(() => {
-      setIsAnalyzing(false);
-    });
-  }
+/* components/flow-builder/top-navigation.tsx */
+className="fixed top-0 left-0 right-0 bg-surface border-b border-default z-50"
 
-  return (
-    <div>
-      {/* rest of code here */}
-      <button onClick={handleAnalyzeProcess} disabled={isAnalyzing}>
-        Analyze Process
-      </button>
-    </div>
-  )
-}
-
-export default FooterSummary
-
-// components/flow-builder/top-navigation.tsx
-import { UserMenu } from "@/components/shared/user-menu"
-
-const TopNavigation = () => {
-  return (
-    <header className="flex justify-between items-center">
-      {/* rest of code here */}
-      <div className="flex items-center">
-        {/* existing controls */}
-        <UserMenu />
-      </div>
-    </header>
-  )
-}
-
-export default TopNavigation
+/* components/chat-input.tsx */
+<div
+  className="relative bg-subtle border border-default rounded-lg focus-within:ring-4 focus-within:ring-violet-100 transition-all"
+>
+</merged_code>
