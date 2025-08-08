@@ -1,9 +1,8 @@
 "use client"
 
 import type React from "react"
-
 import type { FlowNode } from "@/types/flow"
-import { AlertTriangle, ArrowRight, Zap, Play, Clock, Paperclip, Edit3, Database, Settings } from "lucide-react"
+import { AlertTriangle, ArrowRight, Zap, Play, Clock, Paperclip, Edit3, Database, Settings } from 'lucide-react'
 
 type FlowNodeProps = {
   node: FlowNode
@@ -22,9 +21,9 @@ const tagIcons = {
 
 const tagColors = {
   friction: "bg-red-100 text-red-600 border-red-200",
-  handoff: "bg-violet-100 text-violet-600 border-violet-200",
+  handoff: "bg-brand-50 text-brand border-violet-200",
   automated: "bg-green-100 text-green-600 border-green-200",
-  trigger: "bg-blue-100 text-blue-600 border-blue-200",
+  trigger: "bg-blue-50 text-blue-700 border-blue-200",
 }
 
 const dataSourceTypeIcons = {
@@ -34,8 +33,8 @@ const dataSourceTypeIcons = {
 }
 
 const dataSourceTypeColors = {
-  api: "bg-blue-100 text-blue-600",
-  event_stream: "bg-purple-100 text-purple-600",
+  api: "bg-indigo-100 text-indigo-600",
+  event_stream: "bg-brand-50 text-brand",
   internal_tool: "bg-green-100 text-green-600",
 }
 
@@ -43,9 +42,9 @@ export function FlowNodeComponent({ node, isSelected, onSelect, onEdit, style }:
   return (
     <div
       className={`
-        absolute bg-white rounded-xl border-2 cursor-pointer group select-none
-        transition-all duration-200 hover:shadow-lg
-        ${isSelected ? "border-violet-500 shadow-lg ring-4 ring-violet-100" : "border-gray-200 shadow-sm hover:border-gray-300"}
+        absolute bg-surface rounded-xl-token border cursor-pointer group select-none
+        transition-all duration-200 shadow-e1 hover:shadow-e2
+        ${isSelected ? "ring-4 ring-brand/20 border-violet-200" : "border-default"}
       `}
       style={{
         left: node.position.x,
@@ -56,7 +55,6 @@ export function FlowNodeComponent({ node, isSelected, onSelect, onEdit, style }:
       }}
       onClick={() => onSelect(node.id)}
     >
-      {/* Node Header */}
       <div className="flex items-start justify-between p-4 pb-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between mb-2">
@@ -64,7 +62,6 @@ export function FlowNodeComponent({ node, isSelected, onSelect, onEdit, style }:
               {node.title}
             </h3>
 
-            {/* Data Source Icons - Top Right */}
             {node.simulatedSources && node.simulatedSources.length > 0 && (
               <div className="flex gap-1 flex-shrink-0">
                 {node.simulatedSources.slice(0, 3).map((source, index) => (
@@ -77,7 +74,7 @@ export function FlowNodeComponent({ node, isSelected, onSelect, onEdit, style }:
                   </div>
                 ))}
                 {node.simulatedSources.length > 3 && (
-                  <div className="w-5 h-5 rounded flex items-center justify-center bg-gray-100 text-gray-600 text-xs font-medium">
+                  <div className="w-5 h-5 rounded flex items-center justify-center bg-subtle text-secondary text-xs font-medium">
                     +{node.simulatedSources.length - 3}
                   </div>
                 )}
@@ -86,21 +83,20 @@ export function FlowNodeComponent({ node, isSelected, onSelect, onEdit, style }:
           </div>
 
           {node.role && (
-            <div className="flex items-center gap-1.5 mb-3">
-              <div className="w-2 h-2 bg-violet-400 rounded-full flex-shrink-0"></div>
-              <p className="text-sm text-gray-600 font-medium truncate select-none">{node.role}</p>
+            <div className="inline-flex items-center gap-1.5 mb-3 badge-soft">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand" />
+              <p className="text-xs font-medium text-secondary truncate select-none">{node.role}</p>
             </div>
           )}
         </div>
 
-        {/* Edit button - only visible when selected */}
         {isSelected && (
           <button
             onClick={(e) => {
               e.stopPropagation()
               onEdit?.(node.id)
             }}
-            className="flex-shrink-0 w-8 h-8 bg-violet-600 hover:bg-violet-700 text-white rounded-md shadow-md transition-all duration-200 flex items-center justify-center ml-2"
+            className="flex-shrink-0 w-8 h-8 bg-brand hover:bg-brand-700 text-white rounded-md shadow-e1 transition-all duration-200 flex items-center justify-center ml-2"
             title="Edit node"
           >
             <Edit3 className="w-4 h-4" />
@@ -108,22 +104,19 @@ export function FlowNodeComponent({ node, isSelected, onSelect, onEdit, style }:
         )}
       </div>
 
-      {/* Node Content */}
       <div className="px-4 pb-4 space-y-3">
-        {/* Tools */}
         {node.tools && node.tools.length > 0 && (
           <div className="space-y-1">
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide select-none">Tools</div>
-            <div className="text-sm text-gray-700 leading-relaxed select-none">
+            <div className="text-xs font-medium text-muted uppercase tracking-wide select-none">Tools</div>
+            <div className="text-sm text-secondary leading-relaxed select-none">
               {node.tools.slice(0, 2).join(", ")}
-              {node.tools.length > 2 && <span className="text-gray-500"> +{node.tools.length - 2} more</span>}
+              {node.tools.length > 2 && <span className="text-muted"> +{node.tools.length - 2} more</span>}
             </div>
           </div>
         )}
 
-        {/* Bottom Row: Time/Attachments and Flag Tags */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 text-xs text-gray-500">
+          <div className="flex items-center gap-3 text-xs text-muted">
             {node.duration && (
               <div className="flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5" />
@@ -140,13 +133,12 @@ export function FlowNodeComponent({ node, isSelected, onSelect, onEdit, style }:
             )}
           </div>
 
-          {/* Flag Tags - Bottom Right */}
           {node.tags.length > 0 && (
             <div className="flex gap-1.5">
               {node.tags.map((tag) => (
                 <div
                   key={tag}
-                  className={`w-6 h-6 rounded-md flex items-center justify-center ${tagColors[tag]} select-none`}
+                  className={`px-1.5 h-6 rounded-pill border text-xs inline-flex items-center justify-center ${tagColors[tag]}`}
                   title={tag.charAt(0).toUpperCase() + tag.slice(1)}
                 >
                   {tagIcons[tag]}
