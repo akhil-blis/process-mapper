@@ -4,6 +4,7 @@ import type React from "react"
 import { useRouter } from "next/navigation"
 import { Code } from 'lucide-react'
 import { Logo } from "@/components/logo"
+import { UserMenu } from "@/components/shared/user-menu"
 
 type TopNavigationProps = {
   title?: string
@@ -56,15 +57,7 @@ export function TopNavigation({
               <div className="w-2 h-2 bg-success-600 rounded-full animate-pulse" aria-hidden="true"></div>
               <span>Flow ready</span>
             </div>
-            <div
-              className="w-8 h-8 bg-brand-50 rounded-full flex items-center justify-center text-brand font-semibold text-xs"
-              role="button"
-              aria-label="User menu"
-              aria-haspopup="menu"
-              tabIndex={0}
-            >
-              JD
-            </div>
+            <UserMenu />
           </div>
         </div>
       </div>
