@@ -2,15 +2,14 @@
 
 import { useEffect, useState } from "react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Switch } from "@/components/ui/switch"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { LogOut, SettingsIcon, User } from 'lucide-react'
 
 export function UserMenu() {
   const [apiDataEnabled, setApiDataEnabled] = useState(false)
 
-  // Load persisted preference on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem("process-mapper:api-data-enabled")
@@ -64,7 +63,7 @@ export function UserMenu() {
               <Label htmlFor="api-data-switch" className="text-sm font-medium">
                 API Data
               </Label>
-              <p className="text-xs text-gray-500">Use Claude API to generate screen JSON</p>
+              <p className="text-xs text-gray-500">Use API to generate screen JSON</p>
             </div>
             <Switch
               id="api-data-switch"

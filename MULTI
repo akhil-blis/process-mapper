@@ -1,80 +1,36 @@
 // app/page.tsx
 import { UserMenu } from "@/components/shared/user-menu"
+// Remove now-unused imports if present: DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger from "@/components/ui/dropdown-menu"; Switch from "@/components/ui/switch"; Avatar, AvatarFallback from "@/components/ui/avatar"; Label from "@/components/ui/label"; and icons User, SettingsIcon, LogOut if they were imported for a previous inline menu.
 
 const Page = () => {
   return (
-    <div className="flex items-center">
-      <UserMenu />
-    </div>
+    <header className="bg-white p-4">
+      <div className="flex justify-between items-center">
+        <div className="text-xl font-bold">My App</div>
+        <div className="flex items-center">
+          <UserMenu />
+        </div>
+      </div>
+    </header>
   )
 }
 
 export default Page
 
-// components/flow-builder/footer-summary.tsx
-import { buildLocalProcessAnalysis } from "@/data/local-analysis"
-import { useRouter } from "next/router"
-import { useState } from "react"
-
-const FooterSummary = ({ flowData }) => {
-  const router = useRouter()
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-
-  const handleAnalyzeProcess = () => {
-    setIsAnalyzing(true)
-    const apiEnabled = typeof window !== "undefined" && localStorage.getItem("process-mapper:api-data-enabled") === "true";
-    if (!apiEnabled) {
-      const localResult = buildLocalProcessAnalysis(flowData);
-      sessionStorage.setItem("processAnalysisData", JSON.stringify(localResult));
-      router.push("/process-analysis");
-      setIsAnalyzing(false);
-      return;
-    }
-
-    fetch("/api/analyze-process", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(flowData),
-    })
-    .then(response => response.json())
-    .then(data => {
-      sessionStorage.setItem("processAnalysisData", JSON.stringify(data));
-      router.push("/process-analysis");
-    })
-    .catch(error => {
-      console.error("Error analyzing process:", error);
-    })
-    .finally(() => {
-      setIsAnalyzing(false);
-    });
-  }
-
-  return (
-    <div>
-      {/* rest of code here */}
-      <button onClick={handleAnalyzeProcess} disabled={isAnalyzing}>
-        Analyze Process
-      </button>
-    </div>
-  )
-}
-
-export default FooterSummary
-
 // components/flow-builder/top-navigation.tsx
 import { UserMenu } from "@/components/shared/user-menu"
+// Remove any now-unused imports related to an inline menu if present.
 
 const TopNavigation = () => {
   return (
-    <header className="flex justify-between items-center">
-      {/* rest of code here */}
-      <div className="flex items-center">
-        {/* existing controls */}
-        <UserMenu />
+    <nav className="bg-gray-100 p-4">
+      <div className="flex justify-between items-center">
+        <div className="text-lg font-semibold">Flow Builder</div>
+        <div className="flex items-center">
+          <UserMenu />
+        </div>
       </div>
-    </header>
+    </nav>
   )
 }
 
