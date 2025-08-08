@@ -1,9 +1,10 @@
 "use client"
 
 import type { FlowData } from "@/types/flow"
-import { ArrowLeft, Sparkles } from "lucide-react"
+import { ArrowLeft, Sparkles } from 'lucide-react'
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { buildLocalProcessAnalysis } from "@/data/local-analysis"
 
 type FooterSummaryProps = {
   flowData: FlowData
@@ -15,34 +16,61 @@ export function FooterSummary({ flowData }: FooterSummaryProps) {
   const roleCount = new Set(flowData.nodes.map((n) => n.role).filter(Boolean)).size
   const frictionCount = flowData.nodes.filter((n) => n.tags?.includes("friction")).length
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [apiDataEnabled, setApiDataEnabled] = useState(false)
+
+  useEffect(() => {
+    // Initialize from localStorage
+    try {
+      setApiDataEnabled(localStorage.getItem("process-mapper:api-data-enabled") === "true")
+    } catch {
+      // ignore
+    }
+
+    // Stay in sync with global toggle changes
+    const onToggle = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail && typeof detail.enabled === "boolean") {
+        setApiDataEnabled(detail.enabled)
+      }
+    }
+    window.addEventListener("pm:api-data-changed", onToggle as EventListener)
+    return () => window.removeEventListener("pm:api-data-changed", onToggle as EventListener)
+  }, [])
 
   const handleAnalyzeProcess = async () => {
     setIsAnalyzing(true)
 
     try {
-      // Make API call to analyze the process
-      const response = await fetch("/api/analyze-process", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ flow: flowData }),
-      })
+      const enabled =
+        typeof window !== "undefined" &&
+        localStorage.getItem("process-mapper:api-data-enabled") === "true"
 
-      if (!response.ok) {
-        throw new Error("Analysis failed")
+      if (enabled) {
+        // API mode: call server to analyze
+        const response = await fetch("/api/analyze-process", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ flow: flowData }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Analysis failed")
+        }
+
+        const analysisData = await response.json()
+        sessionStorage.setItem("processAnalysisData", JSON.stringify(analysisData))
+      } else {
+        // Local mode: build deterministic analysis from current flow
+        const localAnalysis = buildLocalProcessAnalysis(flowData)
+        sessionStorage.setItem("processAnalysisData", JSON.stringify(localAnalysis))
       }
 
-      const analysisData = await response.json()
-
-      // Store the analysis data in sessionStorage
-      sessionStorage.setItem("processAnalysisData", JSON.stringify(analysisData))
-
-      // Navigate to the analysis page
       router.push("/process-analysis")
     } catch (error) {
       console.error("Error analyzing process:", error)
-      // Still navigate to show the default data if API fails
+      // Navigate to show whatever default the page can render
       router.push("/process-analysis")
     } finally {
       setIsAnalyzing(false)
@@ -69,7 +97,7 @@ export function FooterSummary({ flowData }: FooterSummaryProps) {
             className="text-sm font-medium px-4 py-2 rounded-md bg-white text-violet-600 hover:bg-violet-50 transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Sparkles className={`h-4 w-4 ${isAnalyzing ? "animate-spin" : ""}`} />
-            {isAnalyzing ? "Analyzing..." : "Analyse Process Flow"}
+            {isAnalyzing ? "Analyzing..." : apiDataEnabled ? "Analyse Process Flow" : "Analyse (Local) Process Flow"}
           </button>
         </div>
       </div>
