@@ -4,37 +4,24 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import {
-  ArrowLeft,
-  Code,
-  Clock,
-  Users,
-  AlertTriangle,
-  Play,
-  Zap,
-  Shuffle,
-  Grid,
-  Layers,
-  FileText,
-  ClipboardList,
-  FilePlus,
-  Terminal,
-  Mail,
-  Download,
-  Database,
-  AlertCircle,
-  Edit3,
-  Brain,
-  MessageSquare,
-  BarChart3,
-  Settings,
-  Trash2,
-} from "lucide-react"
+import { ArrowLeft, Code, Clock, Users, AlertTriangle, Play, Zap, Shuffle, Grid, Layers, FileText, ClipboardList, FilePlus, Terminal, Mail, Download, Database, AlertCircle, Edit3, Brain, MessageSquare, BarChart3, Settings, Trash2 } from 'lucide-react'
 import { Logo } from "@/components/logo"
 import { ProcessAnalysisOverrideModal } from "@/components/analysis/process-analysis-override-modal"
 import { AddOpportunityModal } from "@/components/analysis/add-opportunity-modal"
 
 // Updated types for the new JSON structure
+type ProcessAnalysisMetrics = {
+  stepCount: number
+  roleCount: number
+  frictionCount: number
+  handoffCount: number
+  automatedCount: number
+  estimatedDurationMinutes: number
+  // Optional extended metrics supported by the new default JSON
+  totalTrafficVolume?: number
+  avgErrorRate?: number
+}
+
 type ProcessAnalysisData = {
   processAnalysis: {
     meta: {
@@ -43,14 +30,7 @@ type ProcessAnalysisData = {
       analysisDate: string
     }
     summary: {
-      metrics: {
-        stepCount: number
-        roleCount: number
-        frictionCount: number
-        handoffCount: number
-        automatedCount: number
-        estimatedDurationMinutes: number
-      }
+      metrics: ProcessAnalysisMetrics
       roles: string[]
       tools: string[]
     }
@@ -58,7 +38,7 @@ type ProcessAnalysisData = {
       id: string
       title: string
       description: string
-      type: "delay" | "friction" | "overlap"
+      type: "delay" | "friction" | "overlap" | "opportunity"
       severity: "high" | "medium" | "low"
       icon: string
     }>
@@ -87,70 +67,73 @@ type ProcessAnalysisData = {
   }
 }
 
-// Sample data using the new structure
-const sampleData: ProcessAnalysisData = {
+const DEFAULT_PROCESS_ANALYSIS: ProcessAnalysisData = {
   processAnalysis: {
     meta: {
-      processTitle: "New Employee Onboarding",
-      source: "uploadedFlow",
-      analysisDate: "2025-06-19",
+      processTitle: "Hiring Process - Mid-Level Role",
+      source: "Hiring Process Mid Level Role Aug 8 2025.json",
+      analysisDate: "2025-08-08",
     },
     summary: {
       metrics: {
-        stepCount: 8,
-        roleCount: 4,
-        frictionCount: 2,
-        handoffCount: 2,
+        stepCount: 15,
+        roleCount: 12,
+        frictionCount: 3,
+        handoffCount: 4,
         automatedCount: 1,
-        estimatedDurationMinutes: 5040,
+        estimatedDurationMinutes: 10320,
+        totalTrafficVolume: 34300,
+        avgErrorRate: 0.093,
       },
-      roles: ["Hiring Manager", "HR Specialist", "HR Manager", "IT Administrator"],
+      roles: ["Department Lead", "Hiring Manager", "Recruiter", "Team Leads", "Hiring Committee", "Candidate"],
       tools: [
-        "HRIS",
-        "Email",
-        "ATS",
-        "Job Board",
+        "Workday",
+        "Google Docs",
         "LinkedIn",
-        "Indeed",
-        "Company Website",
-        "Phone",
+        "Company Site",
+        "ATS",
+        "Email",
         "Zoom",
-        "Calendar",
-        "DocuSign",
-        "Active Directory",
+        "Calendly",
+        "Google Calendar",
+        "Notion",
         "Slack",
-        "Google Workspace",
+        "DocuSign",
       ],
     },
     insights: [
       {
-        id: "1",
-        title: "Bottleneck Detected",
-        description: "Step 4 (Screen Candidates) takes 4 hours and has friction tags – this is your main bottleneck.",
-        type: "delay",
+        id: "insight-1",
+        title: "High-volume review bottleneck",
+        description:
+          "Inbound Applications Review has both a long duration (2 days) and a friction tag, combined with a high volume of 18,200 applications and above-average error rates (12% and 8%). This step poses a major processing delay risk.",
+        type: "friction",
         severity: "high",
         icon: "alert-triangle",
       },
       {
-        id: "2",
-        title: "Multiple Handoffs",
-        description: "2 handoff points between roles may cause delays and miscommunication.",
+        id: "insight-2",
+        title: "Multiple role handoffs",
+        description:
+          "The process involves at least 4 role handoffs, increasing coordination overhead and the potential for communication gaps.",
         type: "friction",
         severity: "medium",
         icon: "shuffle",
       },
       {
-        id: "3",
-        title: "Automation Opportunity",
-        description: "Only 1 of 8 steps are automated – significant efficiency gains possible.",
-        type: "opportunity",
+        id: "insight-3",
+        title: "High error rate in scheduling automation",
+        description:
+          "The Schedule Interview Loop step is automated but experiences a 15% error rate, indicating integration or usability issues with calendar tools.",
+        type: "delay",
         severity: "medium",
-        icon: "zap",
+        icon: "alert-triangle",
       },
       {
-        id: "4",
-        title: "Tool Fragmentation",
-        description: "15 different tools used across the process – consider consolidation.",
+        id: "insight-4",
+        title: "Loop in rejection path",
+        description:
+          "Rejected candidates are routed back to Inbound Applications Review, creating a potential rework loop that can waste resources if not managed with clear criteria.",
         type: "overlap",
         severity: "low",
         icon: "grid",
@@ -158,92 +141,48 @@ const sampleData: ProcessAnalysisData = {
     ],
     aiOpportunities: [
       {
-        id: "auto-score-candidates",
+        id: "ai-opp-1",
         title: "Auto-score candidates",
         description:
-          "Use AI to automatically score candidates based on resume content and role criteria, reducing manual screening time by 70%.",
-        targetStepId: "4",
-        targetStepTitle: "Screen Candidates",
-        category: "analysis",
+          "Deploy AI to pre-screen and rank applications in the Inbound Applications Review step, reducing manual workload and mitigating delays caused by high volume and error-prone manual review.",
+        targetStepId: "step-3a",
+        targetStepTitle: "Inbound Applications Review",
+        category: "classification",
         impact: "high",
         icon: "layers",
-        dataSource: {
-          hasDataSource: true,
-          traffic: "2.3k/day",
-          volume: "High",
-        },
       },
       {
-        id: "summarize-feedback",
-        title: "Summarize interview feedback",
+        id: "ai-opp-2",
+        title: "Intelligent interview scheduling",
         description:
-          "Automatically consolidate feedback from multiple interviewers into a structured decision summary.",
-        targetStepId: "5",
-        targetStepTitle: "Interview Rounds",
+          "Use AI-powered scheduling assistants that adapt to panel availability, time zones, and candidate preferences to lower the 15% error rate in the Schedule Interview Loop step.",
+        targetStepId: "step-5",
+        targetStepTitle: "Schedule Interview Loop",
+        category: "automation",
+        impact: "medium",
+        icon: "zap",
+      },
+      {
+        id: "ai-opp-3",
+        title: "Interview feedback summarization",
+        description:
+          "Implement AI tools to consolidate and summarize panel feedback in Interview Panel Evaluation, accelerating decision-making and reducing reliance on manual collation.",
+        targetStepId: "step-6",
+        targetStepTitle: "Interview Panel Evaluation",
         category: "summarization",
         impact: "medium",
         icon: "file-text",
-        dataSource: {
-          hasDataSource: false,
-        },
       },
       {
-        id: "generate-checklist",
-        title: "Generate onboarding checklist",
-        description: "Auto-create personalized onboarding tasks based on role, department, and location requirements.",
-        targetStepId: "8",
-        targetStepTitle: "Welcome Session",
-        category: "generation",
-        impact: "medium",
-        icon: "clipboard-list",
-        dataSource: {
-          hasDataSource: true,
-          traffic: "450/week",
-          volume: "Medium",
-        },
-      },
-      {
-        id: "automate-offers",
-        title: "Automate offer letter creation",
+        id: "ai-opp-4",
+        title: "Candidate rejection communication automation",
         description:
-          "Generate customized offer letters with correct compensation, benefits, and legal terms based on role and level.",
-        targetStepId: "6",
-        targetStepTitle: "Make Offer",
-        category: "generation",
-        impact: "high",
-        icon: "file-plus",
-        dataSource: {
-          hasDataSource: false,
-        },
-      },
-      {
-        id: "smart-provisioning",
-        title: "Smart IT provisioning",
-        description:
-          "Automatically determine and provision required IT access, tools, and accounts based on role and team.",
-        targetStepId: "7",
-        targetStepTitle: "Set Up IT Access",
-        category: "automation",
-        impact: "high",
-        icon: "terminal",
-        dataSource: {
-          hasDataSource: true,
-          traffic: "1.8k/month",
-          volume: "Low",
-        },
-      },
-      {
-        id: "reference-automation",
-        title: "Reference check automation",
-        description: "Automate reference check requests and follow-ups via email templates.",
-        targetStepId: "4",
-        targetStepTitle: "Screen Candidates",
-        category: "automation",
+          "Introduce AI-generated personalized rejection messages in Candidate Rejected step to streamline communications and maintain a positive candidate experience.",
+        targetStepId: "step-8a",
+        targetStepTitle: "Candidate Rejected",
+        category: "communication",
         impact: "low",
         icon: "mail",
-        dataSource: {
-          hasDataSource: false,
-        },
       },
     ],
   },
@@ -255,7 +194,23 @@ export default function ProcessAnalysisPage() {
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false)
   const [isAddOpportunityModalOpen, setIsAddOpportunityModalOpen] = useState(false)
   const [editingOpportunity, setEditingOpportunity] = useState<any>(null)
-  const [analysisData, setAnalysisData] = useState<ProcessAnalysisData>(sampleData)
+  const [analysisData, setAnalysisData] = useState<ProcessAnalysisData>(() => {
+    if (typeof window !== "undefined") {
+      const storedData = sessionStorage.getItem("processAnalysisData")
+      if (storedData) {
+        try {
+          const parsedData = JSON.parse(storedData)
+          // Clear the stored data after using it (optional; keep if desired)
+          sessionStorage.removeItem("processAnalysisData")
+          return parsedData
+        } catch (error) {
+          console.error("Error parsing stored analysis data:", error)
+        }
+      }
+    }
+    // Fallback to the new default JSON provided by the user
+    return DEFAULT_PROCESS_ANALYSIS
+  })
 
   const formatDuration = (minutes: number) => {
     if (minutes < 60) return `${minutes}m`
